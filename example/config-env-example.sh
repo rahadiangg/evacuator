@@ -20,6 +20,31 @@
 # export LOG_HANDLER_ENABLED="true"         # Enable log handler
 # export KUBERNETES_HANDLER_ENABLED="true"  # Enable Kubernetes handler
 
+# Telegram notification settings
+# export TELEGRAM_HANDLER_ENABLED="false"   # Enable Telegram notifications
+# export TELEGRAM_BOT_TOKEN=""              # Telegram bot token (get from @BotFather)
+# export TELEGRAM_CHAT_ID=""                # Telegram chat ID (group/channel/user)
+# export TELEGRAM_TIMEOUT="10s"             # HTTP timeout for Telegram API
+# export TELEGRAM_SEND_RAW="false"          # Send raw event data in addition to formatted message
+
+# Telegram Setup Instructions:
+# 1. Create a bot: Message @BotFather on Telegram, send /newbot, follow instructions
+# 2. Get chat ID:
+#    - For private chat: Start chat with bot, send message, visit:
+#      https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates
+#    - For group: Add bot to group, send message mentioning bot, check same URL
+# 3. Test connection:
+#    curl -X POST "https://api.telegram.org/bot<BOT_TOKEN>/sendMessage" \
+#      -H "Content-Type: application/json" \
+#      -d '{"chat_id": "<CHAT_ID>", "text": "Test from evacuator"}'
+#
+# TELEGRAM_SEND_RAW=true: Enables EMERGENCY FAILSAFE mode with multi-layer fallbacks:
+# 1. Sends raw data FIRST (before any processing that could fail)
+# 2. If JSON marshaling fails → sends structured text fallback
+# 3. If everything fails → sends basic emergency capture
+# GUARANTEES incident data is captured even during catastrophic parsing failures.
+# ESSENTIAL for production environments - prevents data loss during critical events.
+
 # Kubernetes settings  
 # export NODE_NAME="$(hostname)"            # Node name (usually auto-set by DaemonSet downward API)
 # export KUBECONFIG=""                      # Path to kubeconfig (leave empty for in-cluster)
@@ -50,6 +75,28 @@
 # 5. Disable auto-detection:
 #    CLOUD_PROVIDER=alibaba AUTO_DETECT=false ./evacuator
 #
+# 6. With Telegram notifications:
+#    TELEGRAM_HANDLER_ENABLED=true \
+#    TELEGRAM_BOT_TOKEN="bot123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" \
+#    TELEGRAM_CHAT_ID="-100123456789" \
+#    ./evacuator
+#
+# 7. With Telegram notifications and raw data:
+#    TELEGRAM_HANDLER_ENABLED=true \
+#    TELEGRAM_BOT_TOKEN="bot123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" \
+#    TELEGRAM_CHAT_ID="-100123456789" \
+#    TELEGRAM_SEND_RAW=true \
+#    ./evacuator
+#
+# 8. Complete setup with all handlers:
+#    LOG_LEVEL=info \
+#    KUBERNETES_HANDLER_ENABLED=true \
+#    TELEGRAM_HANDLER_ENABLED=true \
+#    TELEGRAM_BOT_TOKEN="bot123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" \
+#    TELEGRAM_CHAT_ID="-100123456789" \
+#    TELEGRAM_SEND_RAW=true \
+#    ./evacuator
+#
 # RECOMMENDED USAGE:
 # Most users should use environment variables directly in their deployment:
 # 
@@ -65,3 +112,15 @@
 #         fieldPath: spec.nodeName
 #   - name: POLL_INTERVAL
 #     value: "5s"
+#   - name: TELEGRAM_HANDLER_ENABLED
+#     value: "true"
+#   - name: TELEGRAM_BOT_TOKEN
+#     valueFrom:
+#       secretKeyRef:
+#         name: evacuator-telegram
+#         key: bot-token
+#   - name: TELEGRAM_CHAT_ID
+#     valueFrom:
+#       secretKeyRef:
+#         name: evacuator-telegram
+#         key: chat-id

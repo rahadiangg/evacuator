@@ -84,6 +84,27 @@ func LoadFromEnv() *Config {
 			cfg.Handlers.Kubernetes.Enabled = enabled
 		}
 	}
+	if val := os.Getenv("TELEGRAM_HANDLER_ENABLED"); val != "" {
+		if enabled, err := strconv.ParseBool(val); err == nil {
+			cfg.Handlers.Telegram.Enabled = enabled
+		}
+	}
+	if val := os.Getenv("TELEGRAM_BOT_TOKEN"); val != "" {
+		cfg.Handlers.Telegram.BotToken = val
+	}
+	if val := os.Getenv("TELEGRAM_CHAT_ID"); val != "" {
+		cfg.Handlers.Telegram.ChatID = val
+	}
+	if val := os.Getenv("TELEGRAM_TIMEOUT"); val != "" {
+		if duration, err := time.ParseDuration(val); err == nil {
+			cfg.Handlers.Telegram.Timeout = duration
+		}
+	}
+	if val := os.Getenv("TELEGRAM_SEND_RAW"); val != "" {
+		if sendRaw, err := strconv.ParseBool(val); err == nil {
+			cfg.Handlers.Telegram.SendRaw = sendRaw
+		}
+	}
 
 	// Kubernetes configuration
 	if val := os.Getenv("NODE_NAME"); val != "" {

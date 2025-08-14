@@ -59,6 +59,9 @@ type HandlersConfig struct {
 
 	// Kubernetes handler settings
 	Kubernetes KubernetesHandlerConfig `yaml:"kubernetes" json:"kubernetes"`
+
+	// Telegram handler settings
+	Telegram TelegramHandlerConfig `yaml:"telegram" json:"telegram"`
 }
 
 // LogHandlerConfig contains log handler settings
@@ -89,6 +92,24 @@ type KubernetesHandlerConfig struct {
 
 	// GracePeriodSeconds is the grace period for pod termination
 	GracePeriodSeconds int `yaml:"grace_period_seconds" json:"grace_period_seconds"`
+}
+
+// TelegramHandlerConfig contains Telegram handler settings
+type TelegramHandlerConfig struct {
+	// Enabled indicates if the Telegram handler is enabled
+	Enabled bool `yaml:"enabled" json:"enabled"`
+
+	// BotToken is the Telegram bot token
+	BotToken string `yaml:"bot_token" json:"bot_token"`
+
+	// ChatID is the chat ID to send messages to
+	ChatID string `yaml:"chat_id" json:"chat_id"`
+
+	// Timeout is the HTTP request timeout
+	Timeout time.Duration `yaml:"timeout" json:"timeout"`
+
+	// SendRaw indicates whether to send raw event data in addition to formatted message
+	SendRaw bool `yaml:"send_raw" json:"send_raw"`
 }
 
 // KubernetesConfig contains Kubernetes client settings
@@ -141,6 +162,11 @@ func DefaultConfig() *Config {
 				DeleteEmptyDirData:  false,
 				IgnorePodDisruption: true, // Ignore PDBs during emergency evacuation
 				GracePeriodSeconds:  10,   // Shorter grace period for faster evacuation
+			},
+			Telegram: TelegramHandlerConfig{
+				Enabled: false, // Disabled by default, requires manual configuration
+				Timeout: 10 * time.Second,
+				SendRaw: false, // Don't send raw data by default
 			},
 		},
 		Kubernetes: KubernetesConfig{
@@ -203,6 +229,21 @@ func (c *Config) Validate() error {
 
 		if c.Handlers.Kubernetes.GracePeriodSeconds < 0 {
 			return fmt.Errorf("grace period cannot be negative")
+		}
+	}
+
+	// Validate Telegram handler config
+	if c.Handlers.Telegram.Enabled {
+		if c.Handlers.Telegram.BotToken == "" {
+			return fmt.Errorf("telegram bot token is required when telegram handler is enabled")
+		}
+
+		if c.Handlers.Telegram.ChatID == "" {
+			return fmt.Errorf("telegram chat ID is required when telegram handler is enabled")
+		}
+
+		if c.Handlers.Telegram.Timeout <= 0 {
+			return fmt.Errorf("telegram timeout must be positive")
 		}
 	}
 

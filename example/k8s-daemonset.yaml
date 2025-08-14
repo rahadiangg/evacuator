@@ -41,6 +41,19 @@ subjects:
   name: evacuator
   namespace: kube-system
 ---
+# Optional: Create this secret to enable Telegram notifications
+# Replace with your actual bot token and chat ID
+# apiVersion: v1
+# kind: Secret
+# metadata:
+#   name: evacuator-telegram
+#   namespace: kube-system
+# type: Opaque
+# data:
+#   # Base64 encoded values - use: echo -n "your-value" | base64
+#   bot-token: Ym90MTIzNDU2OkFCQy1ERUYxMjM0Z2hJa2wtenhONTdXMnYxdTEyM2V3MTE=
+#   chat-id: LTEwMDEyMzQ1Njc4OQ==
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -69,6 +82,10 @@ data:
         delete_empty_dir_data: true
         ignore_pod_disruption: false
         grace_period_seconds: 30
+      
+      # telegram:
+      #   enabled: false      # Enable via environment variables for security
+      #   timeout: "10s"
 
     kubernetes:
       in_cluster: true
@@ -109,6 +126,23 @@ spec:
               fieldPath: spec.nodeName
         - name: CONFIG_FILE
           value: "/etc/evacuator/config.yaml"
+        
+        # Optional: Enable Telegram notifications
+        # Uncomment these lines and create the secret above to enable Telegram
+        # - name: TELEGRAM_HANDLER_ENABLED
+        #   value: "true"
+        # - name: TELEGRAM_BOT_TOKEN
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: evacuator-telegram
+        #       key: bot-token
+        # - name: TELEGRAM_CHAT_ID
+        #   valueFrom:
+        #     secretKeyRef:
+        #       name: evacuator-telegram
+        #       key: chat-id
+        # - name: TELEGRAM_SEND_RAW
+        #   value: "false"  # Set to "true" to send raw event data
         resources:
           requests:
             cpu: 100m

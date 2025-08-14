@@ -29,6 +29,25 @@ handlers:
     ignore_pod_disruption: true    # Ignore PDBs during emergency evacuation
     grace_period_seconds: 10       # Shorter grace period for faster evacuation
 
+  telegram:
+    enabled: false               # Disabled by default, requires manual configuration
+    bot_token: ""               # Telegram bot token (get from @BotFather)
+    chat_id: ""                 # Chat ID where to send notifications
+    timeout: "10s"              # HTTP request timeout for Telegram API
+    send_raw: false             # Send raw event data in addition to formatted message
+
+# Telegram Setup Guide:
+# 1. Create bot: Message @BotFather, send /newbot, save the token
+# 2. Get chat ID: Add bot to chat, send message, visit:
+#    https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates
+# 3. For security, use environment variables instead:
+#    TELEGRAM_BOT_TOKEN="bot123456:ABC..." TELEGRAM_CHAT_ID="-100123..."
+#
+# send_raw option: When enabled, ALWAYS sends raw JSON data as PRIORITY #1
+# even if formatted message fails. Uses multi-layer emergency fallbacks to 
+# guarantee incident data is captured. Critical for production monitoring
+# where missing termination events could cause data loss or service disruption.
+
 # Kubernetes client configuration
 kubernetes:
   kubeconfig: ""       # Path to kubeconfig file (empty for default locations)
@@ -55,3 +74,8 @@ logging:
 #   KUBERNETES_IN_CLUSTER=false     # Explicitly control in-cluster mode
 #   CLOUD_PROVIDER=alibaba           # Force specific provider: alibaba
 #   AUTO_DETECT=false                # Disable auto-detection
+#   TELEGRAM_HANDLER_ENABLED=true   # Enable Telegram notifications
+#   TELEGRAM_BOT_TOKEN="bot123456:ABC"  # Your bot token from @BotFather
+#   TELEGRAM_CHAT_ID="-100123456789"    # Chat ID (group/channel/user)
+#   TELEGRAM_TIMEOUT="10s"           # Request timeout
+#   TELEGRAM_SEND_RAW=true           # Send raw event data (optional)

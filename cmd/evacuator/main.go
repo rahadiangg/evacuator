@@ -59,6 +59,21 @@ func main() {
 	if !envCfg.Handlers.Kubernetes.Enabled && envCfg.Handlers.Kubernetes.Enabled != cfg.Handlers.Kubernetes.Enabled {
 		cfg.Handlers.Kubernetes.Enabled = envCfg.Handlers.Kubernetes.Enabled
 	}
+	if !envCfg.Handlers.Telegram.Enabled && envCfg.Handlers.Telegram.Enabled != cfg.Handlers.Telegram.Enabled {
+		cfg.Handlers.Telegram.Enabled = envCfg.Handlers.Telegram.Enabled
+	}
+	if envCfg.Handlers.Telegram.BotToken != "" {
+		cfg.Handlers.Telegram.BotToken = envCfg.Handlers.Telegram.BotToken
+	}
+	if envCfg.Handlers.Telegram.ChatID != "" {
+		cfg.Handlers.Telegram.ChatID = envCfg.Handlers.Telegram.ChatID
+	}
+	if envCfg.Handlers.Telegram.Timeout != 0 {
+		cfg.Handlers.Telegram.Timeout = envCfg.Handlers.Telegram.Timeout
+	}
+	if envCfg.Handlers.Telegram.SendRaw != cfg.Handlers.Telegram.SendRaw {
+		cfg.Handlers.Telegram.SendRaw = envCfg.Handlers.Telegram.SendRaw
+	}
 	if envCfg.Kubernetes.NodeName != "" {
 		cfg.Kubernetes.NodeName = envCfg.Kubernetes.NodeName
 	}
@@ -239,6 +254,24 @@ func registerEventHandlers(service *cloud.NodeMonitoringService, cfg *config.Con
 		}
 		service.AddEventHandler(k8sHandler)
 		logger.Info("Registered Kubernetes handler")
+	}
+
+	// Register Telegram handler
+	if cfg.Handlers.Telegram.Enabled {
+		telegramConfig := handlers.TelegramConfig{
+			BotToken: cfg.Handlers.Telegram.BotToken,
+			ChatID:   cfg.Handlers.Telegram.ChatID,
+			Timeout:  cfg.Handlers.Telegram.Timeout,
+			SendRaw:  cfg.Handlers.Telegram.SendRaw,
+			Logger:   logger,
+		}
+
+		telegramHandler, err := handlers.NewTelegramHandler(telegramConfig)
+		if err != nil {
+			return fmt.Errorf("failed to create Telegram handler: %w", err)
+		}
+		service.AddEventHandler(telegramHandler)
+		logger.Info("Registered Telegram handler", "chat_id", cfg.Handlers.Telegram.ChatID)
 	}
 
 	return nil
