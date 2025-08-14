@@ -5,27 +5,94 @@
 # DO NOT source this file directly - it's for documentation purposes only.
 # 
 # Copy the variables you need and set them in your deployment environment.
+#
+# The application now uses Viper for configuration management, which provides:
+# - Automatic precedence: CLI flags > env vars > config file > defaults
+# - Support for multiple config formats (YAML, JSON, TOML, etc.)
+# - Environment variable prefix support (EVACUATOR_*)
+# - Automatic type conversion
+# - No manual merging required
+#
+# ENVIRONMENT VARIABLE FORMATS:
+# 1. CONSISTENT FORMAT (matches YAML structure exactly):
+#    APP_DRY_RUN, MONITORING_PROVIDER, HANDLERS_LOG_ENABLED, etc.
+# 2. PREFIXED FORMAT (with EVACUATOR_ prefix):
+#    EVACUATOR_APP_DRY_RUN, EVACUATOR_MONITORING_PROVIDER, etc.
 
-# Application settings
-# export DRY_RUN="false"                    # Enable dry-run mode (no actual node draining)
+# ===== CONSISTENT FORMAT (RECOMMENDED) =====
+# These match the YAML structure exactly: section_key becomes SECTION_KEY
 
-# Cloud provider settings  
-# export CLOUD_PROVIDER=""                  # Force specific provider: alibaba (empty = auto-detect)
-# export AUTO_DETECT="true"                 # Enable auto-detection when CLOUD_PROVIDER is empty
-# export POLL_INTERVAL="5s"                 # How often to check for spot termination events (3s-30s)
-# export PROVIDER_TIMEOUT="5s"              # Timeout for cloud provider API calls (default: 5s)
-# export PROVIDER_RETRIES="3"               # Number of retries for failed cloud provider requests (default: 3)
+# APPLICATION SETTINGS
+# export APP_DRY_RUN="false"                    # app.dry_run - Enable dry-run mode
+# export APP_NODE_NAME=""                       # app.node_name - Node name to monitor (auto-detected)
 
-# Handler settings
-# export LOG_HANDLER_ENABLED="true"         # Enable log handler
-# export KUBERNETES_HANDLER_ENABLED="true"  # Enable Kubernetes handler
+# MONITORING SETTINGS  
+# export MONITORING_PROVIDER=""                 # monitoring.provider - Force provider: alibaba
+# export MONITORING_AUTO_DETECT="true"          # monitoring.auto_detect - Auto-detect provider
+# export MONITORING_POLL_INTERVAL="5s"          # monitoring.poll_interval - Check interval (3s-30s)
+# export MONITORING_PROVIDER_TIMEOUT="3s"       # monitoring.provider_timeout - API call timeout
+# export MONITORING_PROVIDER_RETRIES="3"        # monitoring.provider_retries - Retry attempts
+# export MONITORING_EVENT_BUFFER_SIZE="100"     # monitoring.event_buffer_size - Event buffer
 
-# Telegram notification settings
-# export TELEGRAM_HANDLER_ENABLED="false"   # Enable Telegram notifications
-# export TELEGRAM_BOT_TOKEN=""              # Telegram bot token (get from @BotFather)
-# export TELEGRAM_CHAT_ID=""                # Telegram chat ID (group/channel/user)
-# export TELEGRAM_TIMEOUT="10s"             # HTTP timeout for Telegram API
-# export TELEGRAM_SEND_RAW="false"          # Send raw event data in addition to formatted message
+# HANDLER SETTINGS
+# export HANDLERS_LOG_ENABLED="true"            # handlers.log.enabled - Enable log handler
+# export HANDLERS_KUBERNETES_ENABLED="true"     # handlers.kubernetes.enabled - Enable k8s handler
+
+# KUBERNETES DRAIN SETTINGS
+# export HANDLERS_KUBERNETES_DRAIN_TIMEOUT_SECONDS="90"        # handlers.kubernetes.drain_timeout_seconds
+# export HANDLERS_KUBERNETES_FORCE_EVICTION_AFTER="90s"        # handlers.kubernetes.force_eviction_after
+# export HANDLERS_KUBERNETES_SKIP_DAEMON_SETS="true"           # handlers.kubernetes.skip_daemon_sets
+# export HANDLERS_KUBERNETES_DELETE_EMPTY_DIR_DATA="false"     # handlers.kubernetes.delete_empty_dir_data
+# export HANDLERS_KUBERNETES_IGNORE_POD_DISRUPTION="true"      # handlers.kubernetes.ignore_pod_disruption
+# export HANDLERS_KUBERNETES_GRACE_PERIOD_SECONDS="10"         # handlers.kubernetes.grace_period_seconds
+
+# TELEGRAM NOTIFICATION SETTINGS
+# export HANDLERS_TELEGRAM_ENABLED="false"      # handlers.telegram.enabled - Enable Telegram
+# export HANDLERS_TELEGRAM_BOT_TOKEN=""         # handlers.telegram.bot_token - Bot token
+# export HANDLERS_TELEGRAM_CHAT_ID=""           # handlers.telegram.chat_id - Chat ID
+# export HANDLERS_TELEGRAM_TIMEOUT="10s"        # handlers.telegram.timeout - HTTP timeout
+# export HANDLERS_TELEGRAM_SEND_RAW="false"     # handlers.telegram.send_raw - Send raw data
+
+# KUBERNETES SETTINGS  
+# export KUBERNETES_KUBECONFIG=""               # kubernetes.kubeconfig - Kubeconfig path
+# export KUBERNETES_IN_CLUSTER="true"           # kubernetes.in_cluster - Use in-cluster config
+
+# LOGGING SETTINGS
+# export LOGGING_LEVEL="info"                   # logging.level - Log level (debug/info/warn/error)
+# export LOGGING_FORMAT="json"                  # logging.format - Log format (json/text)
+# export LOGGING_OUTPUT="stdout"                # logging.output - Log output destination
+
+# CONFIGURATION FILE (optional)
+# export CONFIG_FILE=""                         # Path to custom config file
+
+# ===== PREFIXED FORMAT (with EVACUATOR_ prefix) =====
+# All above variables can also be prefixed with EVACUATOR_:
+# export EVACUATOR_APP_DRY_RUN="false"
+# export EVACUATOR_MONITORING_PROVIDER="alibaba"
+# export EVACUATOR_MONITORING_AUTO_DETECT="true"
+# export EVACUATOR_MONITORING_EVENT_BUFFER_SIZE="100"
+# export EVACUATOR_MONITORING_POLL_INTERVAL="5s"
+# export EVACUATOR_MONITORING_PROVIDER_TIMEOUT="3s"
+# export EVACUATOR_MONITORING_PROVIDER_RETRIES="3"
+# export EVACUATOR_HANDLERS_LOG_ENABLED="true"
+# export EVACUATOR_HANDLERS_KUBERNETES_ENABLED="true"
+# export EVACUATOR_HANDLERS_KUBERNETES_DRAIN_TIMEOUT_SECONDS="90"
+# export EVACUATOR_HANDLERS_KUBERNETES_FORCE_EVICTION_AFTER="90s"
+# export EVACUATOR_HANDLERS_KUBERNETES_SKIP_DAEMON_SETS="true"
+# export EVACUATOR_HANDLERS_KUBERNETES_DELETE_EMPTY_DIR_DATA="false"
+# export EVACUATOR_HANDLERS_KUBERNETES_IGNORE_POD_DISRUPTION="true"
+# export EVACUATOR_HANDLERS_KUBERNETES_GRACE_PERIOD_SECONDS="10"
+# export EVACUATOR_HANDLERS_TELEGRAM_ENABLED="false"
+# export EVACUATOR_HANDLERS_TELEGRAM_BOT_TOKEN=""
+# export EVACUATOR_HANDLERS_TELEGRAM_CHAT_ID=""
+# export EVACUATOR_HANDLERS_TELEGRAM_TIMEOUT="10s"
+# export EVACUATOR_HANDLERS_TELEGRAM_SEND_RAW="false"
+# export EVACUATOR_KUBERNETES_KUBECONFIG=""
+# export EVACUATOR_KUBERNETES_IN_CLUSTER="true"
+# export EVACUATOR_APP_NODE_NAME=""
+# export EVACUATOR_LOGGING_LEVEL="info"
+# export EVACUATOR_LOGGING_FORMAT="json"
+# export EVACUATOR_LOGGING_OUTPUT="stdout"
 
 # Telegram Setup Instructions:
 # 1. Create a bot: Message @BotFather on Telegram, send /newbot, follow instructions
@@ -37,89 +104,50 @@
 #    curl -X POST "https://api.telegram.org/bot<BOT_TOKEN>/sendMessage" \
 #      -H "Content-Type: application/json" \
 #      -d '{"chat_id": "<CHAT_ID>", "text": "Test from evacuator"}'
-#
-# TELEGRAM_SEND_RAW=true: Enables EMERGENCY FAILSAFE mode with multi-layer fallbacks:
-# 1. Sends raw data FIRST (before any processing that could fail)
-# 2. If JSON marshaling fails → sends structured text fallback
-# 3. If everything fails → sends basic emergency capture
-# GUARANTEES incident data is captured even during catastrophic parsing failures.
-# ESSENTIAL for production environments - prevents data loss during critical events.
 
-# Kubernetes settings  
-# export NODE_NAME="$(hostname)"            # Node name (usually auto-set by DaemonSet downward API)
-# export KUBECONFIG=""                      # Path to kubeconfig (leave empty for in-cluster)
-# export KUBERNETES_IN_CLUSTER="true"       # Use in-cluster config (false = use kubeconfig)
+# USAGE EXAMPLES:
 
-# Logging settings
-# export LOG_LEVEL="info"                   # debug, info, warn, error
-# export LOG_FORMAT="json"                  # json, text
+# 1. CONSISTENT FORMAT (recommended):
+#    APP_DRY_RUN=true LOGGING_LEVEL=debug ./evacuator
+#    MONITORING_PROVIDER=alibaba HANDLERS_TELEGRAM_ENABLED=true ./evacuator
 
-# Configuration file (optional)
-# export CONFIG_FILE=""                     # Path to custom config file
+# 2. PREFIXED FORMAT:
+#    EVACUATOR_APP_DRY_RUN=true EVACUATOR_LOGGING_LEVEL=debug ./evacuator
 
-# Usage examples:
-# 1. Basic usage with dry-run:
-#    DRY_RUN=true LOG_LEVEL=debug ./evacuator
-#
-# 2. With custom poll interval (3s-30s range):
-#    POLL_INTERVAL=3s ./evacuator   # Fast detection
-#    POLL_INTERVAL=10s ./evacuator  # Balanced detection  
-#    POLL_INTERVAL=30s ./evacuator  # Conservative detection
-#
 # 3. With custom config file:
 #    CONFIG_FILE="./my-config.yaml" ./evacuator
-#
-# 4. Force Alibaba Cloud provider:
-#    CLOUD_PROVIDER=alibaba ./evacuator
-#
-# 5. Disable auto-detection:
-#    CLOUD_PROVIDER=alibaba AUTO_DETECT=false ./evacuator
-#
-# 6. With Telegram notifications:
-#    TELEGRAM_HANDLER_ENABLED=true \
-#    TELEGRAM_BOT_TOKEN="bot123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" \
-#    TELEGRAM_CHAT_ID="-100123456789" \
+
+# 4. Complete example with Telegram:
+#    APP_DRY_RUN=false \
+#    MONITORING_PROVIDER=alibaba \
+#    HANDLERS_TELEGRAM_ENABLED=true \
+#    HANDLERS_TELEGRAM_BOT_TOKEN="bot123456:ABC-DEF" \
+#    HANDLERS_TELEGRAM_CHAT_ID="-100123456789" \
+#    LOGGING_LEVEL=info \
 #    ./evacuator
-#
-# 7. With Telegram notifications and raw data:
-#    TELEGRAM_HANDLER_ENABLED=true \
-#    TELEGRAM_BOT_TOKEN="bot123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" \
-#    TELEGRAM_CHAT_ID="-100123456789" \
-#    TELEGRAM_SEND_RAW=true \
-#    ./evacuator
-#
-# 8. Complete setup with all handlers:
-#    LOG_LEVEL=info \
-#    KUBERNETES_HANDLER_ENABLED=true \
-#    TELEGRAM_HANDLER_ENABLED=true \
-#    TELEGRAM_BOT_TOKEN="bot123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11" \
-#    TELEGRAM_CHAT_ID="-100123456789" \
-#    TELEGRAM_SEND_RAW=true \
-#    ./evacuator
-#
-# RECOMMENDED USAGE:
-# Most users should use environment variables directly in their deployment:
-# 
-# For Kubernetes DaemonSet:
+
+# KUBERNETES DAEMONSET EXAMPLE:
 # env:
-#   - name: DRY_RUN
+#   - name: APP_DRY_RUN
 #     value: "false"
-#   - name: LOG_LEVEL  
+#   - name: LOGGING_LEVEL  
 #     value: "info"
-#   - name: NODE_NAME
+#   - name: LOGGING_FORMAT
+#     value: "json"
+#   - name: APP_NODE_NAME
 #     valueFrom:
 #       fieldRef:
 #         fieldPath: spec.nodeName
-#   - name: POLL_INTERVAL
+#   - name: MONITORING_POLL_INTERVAL
 #     value: "5s"
-#   - name: TELEGRAM_HANDLER_ENABLED
+#   - name: HANDLERS_TELEGRAM_ENABLED
 #     value: "true"
-#   - name: TELEGRAM_BOT_TOKEN
+#   - name: HANDLERS_TELEGRAM_BOT_TOKEN
 #     valueFrom:
 #       secretKeyRef:
 #         name: evacuator-telegram
 #         key: bot-token
-#   - name: TELEGRAM_CHAT_ID
+#   - name: HANDLERS_TELEGRAM_CHAT_ID
 #     valueFrom:
 #       secretKeyRef:
 #         name: evacuator-telegram

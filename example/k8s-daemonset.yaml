@@ -120,7 +120,7 @@ spec:
         imagePullPolicy: Always
         env:
         # Pass the node name to the pod so it knows which node it's monitoring
-        - name: NODE_NAME
+        - name: APP_NODE_NAME
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
@@ -129,19 +129,19 @@ spec:
         
         # Optional: Enable Telegram notifications
         # Uncomment these lines and create the secret above to enable Telegram
-        # - name: TELEGRAM_HANDLER_ENABLED
+        # - name: HANDLERS_TELEGRAM_ENABLED
         #   value: "true"
-        # - name: TELEGRAM_BOT_TOKEN
+        # - name: HANDLERS_TELEGRAM_BOT_TOKEN
         #   valueFrom:
         #     secretKeyRef:
         #       name: evacuator-telegram
         #       key: bot-token
-        # - name: TELEGRAM_CHAT_ID
+        # - name: HANDLERS_TELEGRAM_CHAT_ID
         #   valueFrom:
         #     secretKeyRef:
         #       name: evacuator-telegram
         #       key: chat-id
-        # - name: TELEGRAM_SEND_RAW
+        # - name: HANDLERS_TELEGRAM_SEND_RAW
         #   value: "false"  # Set to "true" to send raw event data
         resources:
           requests:

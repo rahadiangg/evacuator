@@ -56,8 +56,11 @@ func NewNodeMonitoringService(registry CloudProviderRegistry, config NodeMonitor
 
 	nodeName := config.NodeName
 	if nodeName == "" {
-		// Try to get from environment variable (common in Kubernetes DaemonSet)
-		nodeName = os.Getenv("NODE_NAME")
+		// Try to get from environment variables (APP_NODE_NAME has priority over NODE_NAME)
+		nodeName = os.Getenv("APP_NODE_NAME")
+		if nodeName == "" {
+			nodeName = os.Getenv("NODE_NAME") // Legacy fallback for DaemonSet compatibility
+		}
 	}
 
 	return &NodeMonitoringService{

@@ -15,85 +15,10 @@ import (
 )
 
 func main() {
-	// Load configuration
-	var cfg *config.Config
-
-	// Try to load from file first
-	configPath := config.GetConfigPath()
-	if _, err := os.Stat(configPath); err == nil {
-		cfg, err = config.LoadFromFile(configPath)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Failed to load config from %s: %v\n", configPath, err)
-			fmt.Fprintf(os.Stderr, "Using default configuration\n")
-			cfg = config.DefaultConfig()
-		}
-	} else {
-		cfg = config.DefaultConfig()
-	}
-
-	// Override with environment variables
-	envCfg := config.LoadFromEnv()
-	// Merge environment overrides (simplified - in production you'd want a proper merge)
-	if envCfg.App.DryRun {
-		cfg.App.DryRun = envCfg.App.DryRun
-	}
-	if envCfg.Monitoring.Provider != "" {
-		cfg.Monitoring.Provider = envCfg.Monitoring.Provider
-	}
-	if !envCfg.Monitoring.AutoDetect {
-		cfg.Monitoring.AutoDetect = envCfg.Monitoring.AutoDetect
-	}
-	if envCfg.Monitoring.PollInterval != cfg.Monitoring.PollInterval {
-		cfg.Monitoring.PollInterval = envCfg.Monitoring.PollInterval
-	}
-	if envCfg.Monitoring.ProviderTimeout != cfg.Monitoring.ProviderTimeout {
-		cfg.Monitoring.ProviderTimeout = envCfg.Monitoring.ProviderTimeout
-	}
-	if envCfg.Monitoring.ProviderRetries != cfg.Monitoring.ProviderRetries {
-		cfg.Monitoring.ProviderRetries = envCfg.Monitoring.ProviderRetries
-	}
-	// Merge handler configuration
-	if !envCfg.Handlers.Log.Enabled && envCfg.Handlers.Log.Enabled != cfg.Handlers.Log.Enabled {
-		cfg.Handlers.Log.Enabled = envCfg.Handlers.Log.Enabled
-	}
-	if !envCfg.Handlers.Kubernetes.Enabled && envCfg.Handlers.Kubernetes.Enabled != cfg.Handlers.Kubernetes.Enabled {
-		cfg.Handlers.Kubernetes.Enabled = envCfg.Handlers.Kubernetes.Enabled
-	}
-	if !envCfg.Handlers.Telegram.Enabled && envCfg.Handlers.Telegram.Enabled != cfg.Handlers.Telegram.Enabled {
-		cfg.Handlers.Telegram.Enabled = envCfg.Handlers.Telegram.Enabled
-	}
-	if envCfg.Handlers.Telegram.BotToken != "" {
-		cfg.Handlers.Telegram.BotToken = envCfg.Handlers.Telegram.BotToken
-	}
-	if envCfg.Handlers.Telegram.ChatID != "" {
-		cfg.Handlers.Telegram.ChatID = envCfg.Handlers.Telegram.ChatID
-	}
-	if envCfg.Handlers.Telegram.Timeout != 0 {
-		cfg.Handlers.Telegram.Timeout = envCfg.Handlers.Telegram.Timeout
-	}
-	if envCfg.Handlers.Telegram.SendRaw != cfg.Handlers.Telegram.SendRaw {
-		cfg.Handlers.Telegram.SendRaw = envCfg.Handlers.Telegram.SendRaw
-	}
-	if envCfg.Kubernetes.NodeName != "" {
-		cfg.Kubernetes.NodeName = envCfg.Kubernetes.NodeName
-	}
-	if envCfg.Kubernetes.KubeConfig != "" {
-		cfg.Kubernetes.KubeConfig = envCfg.Kubernetes.KubeConfig
-		cfg.Kubernetes.InCluster = envCfg.Kubernetes.InCluster // Set when KUBECONFIG is provided
-	}
-	// Allow explicit override of InCluster setting
-	if envCfg.Kubernetes.InCluster != cfg.Kubernetes.InCluster {
-		cfg.Kubernetes.InCluster = envCfg.Kubernetes.InCluster
-	}
-	if envCfg.Logging.Level != cfg.Logging.Level && envCfg.Logging.Level != "info" {
-		cfg.Logging.Level = envCfg.Logging.Level
-	}
-	if envCfg.Logging.Format != cfg.Logging.Format && envCfg.Logging.Format != "json" {
-		cfg.Logging.Format = envCfg.Logging.Format
-	}
-
-	if err := cfg.Validate(); err != nil {
-		fmt.Fprintf(os.Stderr, "Invalid configuration: %v\n", err)
+	// Load configuration using Viper
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to load configuration: %v\n", err)
 		os.Exit(1)
 	}
 
@@ -115,7 +40,7 @@ func main() {
 
 	// Create monitoring service for single-node operation (DaemonSet deployment)
 	nodeMonitoringConfig := cloud.NodeMonitoringConfig{
-		NodeName:        cfg.Kubernetes.NodeName, // Can also come from NODE_NAME env var
+		NodeName:        cfg.App.NodeName, // Primary node name from app config
 		EventBufferSize: cfg.Monitoring.EventBufferSize,
 		Logger:          logger,
 		Provider:        cfg.Monitoring.Provider,   // Manual provider selection
@@ -238,7 +163,7 @@ func registerEventHandlers(service *cloud.NodeMonitoringService, cfg *config.Con
 		k8sConfig := handlers.KubernetesConfig{
 			KubeConfig:          cfg.Kubernetes.KubeConfig,
 			InCluster:           cfg.Kubernetes.InCluster,
-			NodeName:            cfg.Kubernetes.NodeName,
+			NodeName:            service.GetNodeName(), // Use the node name from monitoring service
 			DrainTimeoutSeconds: cfg.Handlers.Kubernetes.DrainTimeoutSeconds,
 			ForceEvictionAfter:  cfg.Handlers.Kubernetes.ForceEvictionAfter,
 			SkipDaemonSets:      cfg.Handlers.Kubernetes.SkipDaemonSets,
