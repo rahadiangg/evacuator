@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  build-and-deploy:
+  build-and-push:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
