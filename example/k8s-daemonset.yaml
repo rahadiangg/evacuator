@@ -1,0 +1,149 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: evacuator
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: evacuator
+rules:
+- apiGroups: [""]
+  resources: ["nodes"]
+  verbs: ["get", "list", "watch", "update", "patch"]
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list", "watch", "delete"]
+- apiGroups: [""]
+  resources: ["pods/eviction"]
+  verbs: ["create"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["create", "patch"]
+- apiGroups: ["policy"]
+  resources: ["poddisruptionbudgets"]
+  verbs: ["get", "list"]
+- apiGroups: ["apps"]
+  resources: ["daemonsets", "replicasets", "deployments"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: evacuator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: evacuator
+subjects:
+- kind: ServiceAccount
+  name: evacuator
+  namespace: kube-system
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: evacuator-config
+  namespace: kube-system
+data:
+  config.yaml: |
+    app:
+      dry_run: false
+
+    monitoring:
+      provider: ""           # Leave empty for auto-detection, or specify: alibaba
+      auto_detect: true      # Enable auto-detection when provider is empty
+      event_buffer_size: 100
+      poll_interval: "5s"    # How often to check for spot termination events
+
+    handlers:
+      log:
+        enabled: true
+      
+      kubernetes:
+        enabled: true
+        drain_timeout_seconds: 300
+        force_eviction_after: "5m"
+        skip_daemon_sets: true
+        delete_empty_dir_data: true
+        ignore_pod_disruption: false
+        grace_period_seconds: 30
+
+    kubernetes:
+      in_cluster: true
+
+    logging:
+      level: "info"
+      format: "json"
+      output: "stdout"
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: evacuator
+  namespace: kube-system
+  labels:
+    app: evacuator
+spec:
+  selector:
+    matchLabels:
+      app: evacuator
+  template:
+    metadata:
+      labels:
+        app: evacuator
+    spec:
+      serviceAccountName: evacuator
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      containers:
+      - name: evacuator
+        image: evacuator:latest
+        imagePullPolicy: Always
+        env:
+        # Pass the node name to the pod so it knows which node it's monitoring
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: CONFIG_FILE
+          value: "/etc/evacuator/config.yaml"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 200m
+            memory: 256Mi
+        volumeMounts:
+        - name: config
+          mountPath: /etc/evacuator
+          readOnly: true
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: config
+        configMap:
+          name: evacuator-config
+      tolerations:
+      # Allow scheduling on all nodes, including spot instances
+      - operator: Exists
+      # Ensure the pod can run on nodes that are being drained
+      - key: node.kubernetes.io/unschedulable
+        operator: Exists
+        effect: NoSchedule
+      # Allow running on spot instances
+      - key: node.kubernetes.io/spot
+        operator: Exists
+        effect: NoSchedule
+      # Allow running on preemptible instances (GCP)
+      - key: cloud.google.com/gke-preemptible
+        operator: Exists
+        effect: NoSchedule

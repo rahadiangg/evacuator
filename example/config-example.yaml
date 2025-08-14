@@ -1,0 +1,57 @@
+# Example configuration file for evacuator
+# This shows the actual YAML structure supported by the application
+# Most users should use environment variables instead of config files
+
+app:
+  dry_run: false  # Set to true to simulate actions without actually draining nodes
+
+monitoring:
+  provider: ""              # Manually specify cloud provider: alibaba (ALWAYS takes priority)
+  auto_detect: true         # Auto-detect when provider is empty (ignored when provider is set)
+  event_buffer_size: 100    # Buffer size for termination event channels
+  poll_interval: "5s"       # How often to check for spot termination events (3s-30s, default: 5s)
+  provider_timeout: "3s"    # Timeout for cloud provider API calls (default: 3s)
+  provider_retries: 3       # Number of retries for failed cloud provider requests (default: 3)
+
+# Note: The application automatically detects Alibaba Cloud by checking its metadata service
+# Provider configurations use built-in defaults - remove providers section to use defaults
+
+handlers:
+  log:
+    enabled: true
+  
+  kubernetes:
+    enabled: true
+    drain_timeout_seconds: 90      # 1.5 minutes - suitable for 2-minute spot termination notice
+    force_eviction_after: "90s"    # Force evict pods after 1.5 minutes
+    skip_daemon_sets: true
+    delete_empty_dir_data: false
+    ignore_pod_disruption: true    # Ignore PDBs during emergency evacuation
+    grace_period_seconds: 10       # Shorter grace period for faster evacuation
+
+# Kubernetes client configuration
+kubernetes:
+  kubeconfig: ""       # Path to kubeconfig file (empty for default locations)
+  in_cluster: true     # Use in-cluster configuration when running as DaemonSet
+  node_name: ""        # Auto-detected from NODE_NAME env var or hostname
+
+# About Kubernetes Configuration:
+# - in_cluster: true  = Use ServiceAccount (recommended for DaemonSet deployment)
+# - in_cluster: false = Use kubeconfig file (for testing/development)
+# - node_name: Auto-detected from NODE_NAME environment variable, which is
+#   typically set in DaemonSet deployments using downward API
+
+logging:
+  level: "info"        # debug, info, warn, error
+  format: "json"       # json, text  
+  output: "stdout"     # stdout, stderr, or file path
+
+# RECOMMENDED: Use environment variables instead of this config file:
+#   DRY_RUN=true
+#   LOG_LEVEL=debug
+#   LOG_FORMAT=text
+#   NODE_NAME="$(hostname)"          # Auto-populated in DaemonSet
+#   KUBECONFIG="/path/to/config"     # Sets in_cluster=false automatically
+#   KUBERNETES_IN_CLUSTER=false     # Explicitly control in-cluster mode
+#   CLOUD_PROVIDER=alibaba           # Force specific provider: alibaba
+#   AUTO_DETECT=false                # Disable auto-detection

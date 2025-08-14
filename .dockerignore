@@ -1,0 +1,77 @@
+# Git files
+.git
+.gitignore
+
+# Documentation
+README.md
+*.md
+docs/
+
+# Go specific
+**/*.go.mod
+**/*.go.sum
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Test files
+*_test.go
+**/*_test.go
+testdata/
+test/
+tests/
+
+# Development files
+.env*
+*.env
+config.yaml
+kubeconfig
+*.kubeconfig
+
+# Build artifacts (except the actual binary we want)
+.cache/
+tmp/
+temp/
+build/
+dist/
+
+# Log files
+*.log
+logs/
+
+# Coverage and profiling
+*.out
+*.prof
+coverage.*
+
+# Local development
+local/
+dev/
+examples/
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+.travis.yml
+Makefile
+docker-compose.yml
+docker-compose.*.yml
+
+# Kubernetes manifests (usually not needed in container)
+deploy/
+k8s/
+manifests/
+*.yaml
+*.yml
+
+# License and legal
+LICENSE*
+COPYING*
+COPYRIGHT*
