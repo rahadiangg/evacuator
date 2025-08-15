@@ -44,8 +44,9 @@ func LoadConfig() (*Config, error) {
 
 // setDefaults sets default values in Viper
 func setDefaults(v *viper.Viper) {
-	// App defaults
-	v.SetDefault("app.dry_run", false)
+	// Top-level defaults
+	v.SetDefault("dry_run", false)
+	v.SetDefault("node_name", "")
 
 	// Monitoring defaults
 	v.SetDefault("monitoring.provider", "")
@@ -79,18 +80,13 @@ func setDefaults(v *viper.Viper) {
 // setupEnvironmentVariables configures Viper to read from environment variables
 func setupEnvironmentVariables(v *viper.Viper) {
 	// Replace dots with underscores for nested config keys
-	// This allows APP_DRY_RUN to map to app.dry_run automatically
 	v.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	// Enable automatic environment variable reading
-	v.AutomaticEnv()
-
 	// Bind environment variables in consistent format that matches YAML structure
-	// This supports both APP_DRY_RUN and EVACUATOR_APP_DRY_RUN formats
 	// Environment variable mappings that match YAML structure
 	consistentEnvMappings := map[string]string{
-		"APP_DRY_RUN":                               "app.dry_run",
-		"APP_NODE_NAME":                             "app.node_name",
+		"DRY_RUN":                                   "dry_run",
+		"NODE_NAME":                                 "node_name",
 		"MONITORING_PROVIDER":                       "monitoring.provider",
 		"MONITORING_AUTO_DETECT":                    "monitoring.auto_detect",
 		"MONITORING_EVENT_BUFFER_SIZE":              "monitoring.event_buffer_size",

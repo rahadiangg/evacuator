@@ -26,7 +26,7 @@ func main() {
 	logger := setupLogger(cfg.Logging)
 
 	logger.Info("Starting evacuator",
-		"dry_run", cfg.App.DryRun,
+		"dry_run", cfg.DryRun,
 	)
 
 	// Create cloud provider registry
@@ -40,7 +40,7 @@ func main() {
 
 	// Create monitoring service for single-node operation (DaemonSet deployment)
 	nodeMonitoringConfig := cloud.NodeMonitoringConfig{
-		NodeName:        cfg.App.NodeName, // Primary node name from app config
+		NodeName:        cfg.NodeName, // Primary node name from top-level config
 		EventBufferSize: cfg.Monitoring.EventBufferSize,
 		Logger:          logger,
 		Provider:        cfg.Monitoring.Provider,   // Manual provider selection

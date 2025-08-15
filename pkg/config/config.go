@@ -7,6 +7,13 @@ import (
 
 // Config represents the application configuration
 type Config struct {
+	// DryRun enables dry-run mode (no actual actions)
+	DryRun bool `yaml:"dry_run" json:"dry_run" mapstructure:"dry_run"`
+
+	// NodeName is the node name to monitor for termination events
+	// Auto-detected from NODE_NAME environment variable if empty
+	NodeName string `yaml:"node_name" json:"node_name" mapstructure:"node_name"`
+
 	// Application settings
 	App AppConfig `yaml:"app" json:"app" mapstructure:"app"`
 
@@ -22,12 +29,7 @@ type Config struct {
 
 // AppConfig contains general application settings
 type AppConfig struct {
-	// DryRun enables dry-run mode (no actual actions)
-	DryRun bool `yaml:"dry_run" json:"dry_run" mapstructure:"dry_run"`
-
-	// NodeName is the node name to monitor for termination events
-	// Auto-detected from APP_NODE_NAME or NODE_NAME environment variable if empty
-	NodeName string `yaml:"node_name" json:"node_name" mapstructure:"node_name"`
+	// Currently unused - kept for future application-specific settings
 }
 
 // MonitoringConfig contains monitoring settings
@@ -134,10 +136,9 @@ type LoggingConfig struct {
 // DefaultConfig returns a default configuration
 func DefaultConfig() *Config {
 	return &Config{
-		App: AppConfig{
-			DryRun:   false,
-			NodeName: "", // Auto-detected from environment or cloud provider
-		},
+		DryRun:   false,
+		NodeName: "", // Auto-detected from environment or cloud provider
+		App:      AppConfig{},
 		Monitoring: MonitoringConfig{
 			Provider:        "", // Empty means auto-detect
 			AutoDetect:      true,

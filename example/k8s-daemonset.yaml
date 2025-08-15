@@ -61,9 +61,8 @@ metadata:
   namespace: kube-system
 data:
   config.yaml: |
-    app:
-      dry_run: false
-      node_name: ""    # Auto-detected from NODE_NAME env var or cloud provider
+    dry_run: false
+    node_name: ""    # Auto-detected from NODE_NAME env var or cloud provider
 
     monitoring:
       provider: ""              # Manually specify cloud provider: alibaba (ALWAYS takes priority)
@@ -125,7 +124,7 @@ spec:
         imagePullPolicy: Always
         env:
         # Pass the node name to the pod so it knows which node it's monitoring
-        - name: APP_NODE_NAME
+        - name: NODE_NAME
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName

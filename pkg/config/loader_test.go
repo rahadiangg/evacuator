@@ -16,8 +16,8 @@ func TestLoadConfig_Defaults(t *testing.T) {
 	}
 
 	// Test default values
-	if cfg.App.DryRun != false {
-		t.Errorf("Expected DryRun to be false, got %v", cfg.App.DryRun)
+	if cfg.DryRun != false {
+		t.Errorf("Expected DryRun to be false, got %v", cfg.DryRun)
 	}
 
 	if cfg.Monitoring.Provider != "" {
@@ -50,8 +50,8 @@ func TestLoadConfig_EnvironmentVariables(t *testing.T) {
 	clearEnvironmentVariables()
 
 	// Set some environment variables using the new consistent format
-	os.Setenv("APP_DRY_RUN", "true")
-	os.Setenv("APP_NODE_NAME", "test-node-123")
+	os.Setenv("DRY_RUN", "true")
+	os.Setenv("NODE_NAME", "test-node-123")
 	os.Setenv("MONITORING_PROVIDER", "alibaba")
 	os.Setenv("MONITORING_POLL_INTERVAL", "10s")
 	os.Setenv("LOGGING_LEVEL", "debug")
@@ -66,12 +66,12 @@ func TestLoadConfig_EnvironmentVariables(t *testing.T) {
 	}
 
 	// Test environment variable overrides
-	if cfg.App.DryRun != true {
-		t.Errorf("Expected DryRun to be true, got %v", cfg.App.DryRun)
+	if cfg.DryRun != true {
+		t.Errorf("Expected DryRun to be true, got %v", cfg.DryRun)
 	}
 
-	if cfg.App.NodeName != "test-node-123" {
-		t.Errorf("Expected NodeName to be test-node-123, got %v", cfg.App.NodeName)
+	if cfg.NodeName != "test-node-123" {
+		t.Errorf("Expected NodeName to be test-node-123, got %v", cfg.NodeName)
 	}
 
 	if cfg.Monitoring.Provider != "alibaba" {
@@ -95,47 +95,12 @@ func TestLoadConfig_EnvironmentVariables(t *testing.T) {
 	}
 }
 
-func TestLoadConfig_WithEVACUATORPrefix(t *testing.T) {
-	// Clear environment variables first
-	clearEnvironmentVariables()
-
-	// Test with EVACUATOR_ prefix
-	os.Setenv("EVACUATOR_APP_DRY_RUN", "true")
-	os.Setenv("EVACUATOR_APP_NODE_NAME", "evacuator-test-node")
-	os.Setenv("EVACUATOR_MONITORING_PROVIDER", "alibaba")
-	os.Setenv("EVACUATOR_LOGGING_LEVEL", "warn")
-
-	defer clearEnvironmentVariables()
-
-	cfg, err := LoadConfig()
-	if err != nil {
-		t.Fatalf("Expected no error, got %v", err)
-	}
-
-	// Test prefixed environment variables
-	if cfg.App.DryRun != true {
-		t.Errorf("Expected DryRun to be true with prefix, got %v", cfg.App.DryRun)
-	}
-
-	if cfg.App.NodeName != "evacuator-test-node" {
-		t.Errorf("Expected NodeName to be evacuator-test-node with prefix, got %v", cfg.App.NodeName)
-	}
-
-	if cfg.Monitoring.Provider != "alibaba" {
-		t.Errorf("Expected Provider to be alibaba with prefix, got %v", cfg.Monitoring.Provider)
-	}
-
-	if cfg.Logging.Level != "warn" {
-		t.Errorf("Expected log level to be warn with prefix, got %v", cfg.Logging.Level)
-	}
-}
-
 // clearEnvironmentVariables clears all test-related environment variables
 func clearEnvironmentVariables() {
 	envVars := []string{
 		// New consistent format environment variables
-		"APP_DRY_RUN",
-		"APP_NODE_NAME",
+		"DRY_RUN",
+		"NODE_NAME",
 		"MONITORING_PROVIDER",
 		"MONITORING_AUTO_DETECT",
 		"MONITORING_EVENT_BUFFER_SIZE",
@@ -163,7 +128,8 @@ func clearEnvironmentVariables() {
 		"LOGGING_OUTPUT",
 		"CONFIG_FILE",
 		// Legacy variable names (for cleanup)
-		"DRY_RUN",
+		"APP_DRY_RUN",
+		"APP_NODE_NAME",
 		"CLOUD_PROVIDER",
 		"AUTO_DETECT",
 		"EVENT_BUFFER_SIZE",
@@ -178,18 +144,9 @@ func clearEnvironmentVariables() {
 		"TELEGRAM_TIMEOUT",
 		"TELEGRAM_SEND_RAW",
 		"KUBECONFIG",
-		"NODE_NAME",
 		"LOG_LEVEL",
 		"LOG_FORMAT",
 		"LOG_OUTPUT",
-		// Prefixed versions
-		"EVACUATOR_APP_DRY_RUN",
-		"EVACUATOR_APP_NODE_NAME",
-		"EVACUATOR_MONITORING_PROVIDER",
-		"EVACUATOR_MONITORING_AUTO_DETECT",
-		"EVACUATOR_LOGGING_LEVEL",
-		"EVACUATOR_LOGGING_FORMAT",
-		"EVACUATOR_LOGGING_OUTPUT",
 	}
 
 	for _, envVar := range envVars {

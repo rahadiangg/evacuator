@@ -13,9 +13,8 @@
 # 2. Configuration file values
 # 3. Default values
 
-app:
-  dry_run: false   # Set to true to simulate actions without actually draining nodes
-  node_name: ""    # The node name to monitor (auto-detected from NODE_NAME env var or cloud provider)
+dry_run: false   # Set to true to simulate actions without actually draining nodes
+node_name: ""    # The node name to monitor (auto-detected from NODE_NAME env var or cloud provider)
 
 monitoring:
   provider: ""              # Manually specify cloud provider: alibaba (ALWAYS takes priority)
@@ -68,7 +67,7 @@ handlers:
 # - handlers.kubernetes.kubeconfig: Path to kubeconfig file (empty for default locations)
 # 
 # About Node Name Configuration:
-# - app.node_name: Auto-detected from APP_NODE_NAME or NODE_NAME environment variable
+# - node_name: Auto-detected from NODE_NAME environment variable
 # - In DaemonSet deployments, NODE_NAME is typically set using downward API
 # - Fallback: Uses cloud provider instance ID if no environment variable is set
 # - This is the core node that the evacuator monitors for termination events
@@ -84,11 +83,11 @@ logging:
 # 
 # Environment variables are the recommended way to configure this application.
 # Variables follow the YAML structure: section.key becomes SECTION_KEY
-# Example: app.dry_run → APP_DRY_RUN, monitoring.provider → MONITORING_PROVIDER
+# Example: dry_run → DRY_RUN, monitoring.provider → MONITORING_PROVIDER
 #
 # ===== APPLICATION SETTINGS =====
-# APP_DRY_RUN="false"                    # app.dry_run - Enable dry-run mode (no actual actions)
-# APP_NODE_NAME=""                       # app.node_name - Node name to monitor (auto-detected if empty)
+# DRY_RUN="false"                       # dry_run - Enable dry-run mode (no actual actions)
+# NODE_NAME=""                          # node_name - Node name to monitor (auto-detected if empty)
 #
 # ===== MONITORING SETTINGS =====
 # MONITORING_PROVIDER=""                 # monitoring.provider - Force cloud provider: "alibaba"
@@ -132,14 +131,14 @@ logging:
 # ===============================================================================
 #
 # Basic usage:
-#   APP_DRY_RUN=true LOGGING_LEVEL=debug ./evacuator
+#   DRY_RUN=true LOGGING_LEVEL=debug ./evacuator
 #   MONITORING_PROVIDER=alibaba HANDLERS_TELEGRAM_ENABLED=true ./evacuator
 #
 # With custom config file:
 #   CONFIG_FILE="./my-config.yaml" ./evacuator
 #
 # Complete production example:
-#   APP_DRY_RUN=false \
+#   DRY_RUN=false \
 #   MONITORING_PROVIDER=alibaba \
 #   HANDLERS_TELEGRAM_ENABLED=true \
 #   HANDLERS_TELEGRAM_BOT_TOKEN="bot123456:ABC-DEF" \
@@ -155,13 +154,13 @@ logging:
 # Example environment variables for Kubernetes DaemonSet deployment:
 #
 # env:
-#   - name: APP_DRY_RUN
+#   - name: DRY_RUN
 #     value: "false"
 #   - name: LOGGING_LEVEL  
 #     value: "info"
 #   - name: LOGGING_FORMAT
 #     value: "json"
-#   - name: APP_NODE_NAME
+#   - name: NODE_NAME
 #     valueFrom:
 #       fieldRef:
 #         fieldPath: spec.nodeName
