@@ -110,7 +110,7 @@ func NewKubernetesHandler(config KubernetesConfig) (*KubernetesHandler, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to create in-cluster config: %w", err)
 		}
-		config.Logger.Info("Using in-cluster Kubernetes configuration")
+		config.Logger.Info("[handlers.kubernetes] using in-cluster kubernetes configuration")
 	} else {
 		// Use kubeconfig file
 		kubeconfigPath := config.KubeConfig
@@ -123,7 +123,7 @@ func NewKubernetesHandler(config KubernetesConfig) (*KubernetesHandler, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to build kubeconfig from %s: %w", kubeconfigPath, err)
 		}
-		config.Logger.Info("Using kubeconfig file", "path", kubeconfigPath)
+		config.Logger.Info("[handlers.kubernetes] using kubeconfig file", "path", kubeconfigPath)
 	}
 
 	// Create Kubernetes client
@@ -141,7 +141,7 @@ func NewKubernetesHandler(config KubernetesConfig) (*KubernetesHandler, error) {
 		return nil, fmt.Errorf("failed to verify node %s exists: %w", nodeName, err)
 	}
 
-	config.Logger.Info("Successfully connected to Kubernetes cluster", "node_name", nodeName)
+	config.Logger.Info("[handlers.kubernetes] successfully connected to kubernetes cluster", "node_name", nodeName)
 
 	return &KubernetesHandler{
 		logger:              config.Logger,
@@ -163,7 +163,7 @@ func (h *KubernetesHandler) Name() string {
 
 // HandleTerminationEvent handles node termination by draining the Kubernetes node
 func (h *KubernetesHandler) HandleTerminationEvent(ctx context.Context, event cloud.TerminationEvent) error {
-	h.logger.Info("Handling node termination event for Kubernetes",
+	h.logger.Info("[handlers.kubernetes] handling node termination event for kubernetes",
 		"node_id", event.NodeID,
 		"node_name", event.NodeName,
 		"termination_time", event.TerminationTime,
@@ -179,7 +179,7 @@ func (h *KubernetesHandler) HandleTerminationEvent(ctx context.Context, event cl
 	// Calculate available time for draining
 	availableTime := event.GracePeriod
 	if availableTime <= 0 {
-		h.logger.Warn("No grace period available, performing emergency drain")
+		h.logger.Warn("[handlers.kubernetes] no grace period available, performing emergency drain")
 		availableTime = 30 * time.Second
 	}
 
@@ -194,38 +194,38 @@ func (h *KubernetesHandler) HandleTerminationEvent(ctx context.Context, event cl
 
 	// Step 1: Cordon the node (mark as unschedulable)
 	if err := h.cordonNode(drainCtx, nodeName); err != nil {
-		h.logger.Error("Failed to cordon node", "node_name", nodeName, "error", err)
+		h.logger.Error("[handlers.kubernetes] failed to cordon node", "node_name", nodeName, "error", err)
 		return fmt.Errorf("failed to cordon node: %w", err)
 	}
 
-	h.logger.Info("Successfully cordoned node", "node_name", nodeName)
+	h.logger.Info("[handlers.kubernetes] successfully cordoned node", "node_name", nodeName)
 
 	// Step 2: Drain the node (evict all pods)
 	if err := h.drainNode(drainCtx, nodeName); err != nil {
-		h.logger.Error("Failed to drain node", "node_name", nodeName, "error", err)
+		h.logger.Error("[handlers.kubernetes] failed to drain node", "node_name", nodeName, "error", err)
 		// Continue with force eviction if normal drain fails
 		if err := h.forceEvictPods(drainCtx, nodeName); err != nil {
-			h.logger.Error("Failed to force evict pods", "node_name", nodeName, "error", err)
+			h.logger.Error("[handlers.kubernetes] failed to force evict pods", "node_name", nodeName, "error", err)
 			return fmt.Errorf("failed to evacuate node: %w", err)
 		}
 	}
 
-	h.logger.Info("Successfully drained node", "node_name", nodeName)
+	h.logger.Info("[handlers.kubernetes] successfully drained node", "node_name", nodeName)
 
 	// Step 3: Mark node as terminated (add taint/label)
 	if err := h.markNodeTerminated(drainCtx, event); err != nil {
-		h.logger.Warn("Failed to mark node as terminated", "node_name", nodeName, "error", err)
+		h.logger.Warn("[handlers.kubernetes] failed to mark node as terminated", "node_name", nodeName, "error", err)
 		// This is not critical, so we don't fail the operation
 	}
 
-	h.logger.Info("Node evacuation completed successfully", "node_name", nodeName)
+	h.logger.Info("[handlers.kubernetes] node evacuation completed successfully", "node_name", nodeName)
 
 	return nil
 }
 
 // cordonNode marks the node as unschedulable
 func (h *KubernetesHandler) cordonNode(ctx context.Context, nodeName string) error {
-	h.logger.Debug("Cordoning node", "node_name", nodeName)
+	h.logger.Debug("[handlers.kubernetes] cordoning node", "node_name", nodeName)
 
 	// Get the current node
 	node, err := h.client.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
@@ -235,7 +235,7 @@ func (h *KubernetesHandler) cordonNode(ctx context.Context, nodeName string) err
 
 	// Check if already cordoned
 	if node.Spec.Unschedulable {
-		h.logger.Debug("Node is already cordoned", "node_name", nodeName)
+		h.logger.Debug("[handlers.kubernetes] node is already cordoned", "node_name", nodeName)
 		return nil
 	}
 
@@ -248,13 +248,13 @@ func (h *KubernetesHandler) cordonNode(ctx context.Context, nodeName string) err
 		return fmt.Errorf("failed to cordon node %s: %w", nodeName, err)
 	}
 
-	h.logger.Info("Successfully cordoned node", "node_name", nodeName)
+	h.logger.Info("[handlers.kubernetes] successfully cordoned node", "node_name", nodeName)
 	return nil
 }
 
 // drainNode evicts all pods from the node
 func (h *KubernetesHandler) drainNode(ctx context.Context, nodeName string) error {
-	h.logger.Debug("Draining node", "node_name", nodeName)
+	h.logger.Debug("[handlers.kubernetes] draining node", "node_name", nodeName)
 
 	// List all pods on the node
 	pods, err := h.getPodList(ctx, nodeName)
@@ -263,27 +263,27 @@ func (h *KubernetesHandler) drainNode(ctx context.Context, nodeName string) erro
 	}
 
 	if len(pods) == 0 {
-		h.logger.Info("No pods to evict on node", "node_name", nodeName)
+		h.logger.Info("[handlers.kubernetes] no pods to evict on node", "node_name", nodeName)
 		return nil
 	}
 
-	h.logger.Info("Found pods to evict", "node_name", nodeName, "pod_count", len(pods))
+	h.logger.Info("[handlers.kubernetes] found pods to evict", "node_name", nodeName, "pod_count", len(pods))
 
 	// Filter pods that should be evicted
 	podsToEvict := h.filterPodsForEviction(pods)
 
 	if len(podsToEvict) == 0 {
-		h.logger.Info("No pods need eviction after filtering", "node_name", nodeName)
+		h.logger.Info("[handlers.kubernetes] no pods need eviction after filtering", "node_name", nodeName)
 		return nil
 	}
 
-	h.logger.Info("Evicting pods", "node_name", nodeName, "pods_to_evict", len(podsToEvict))
+	h.logger.Info("[handlers.kubernetes] evicting pods", "node_name", nodeName, "pods_to_evict", len(podsToEvict))
 
 	// Evict pods
 	evictionErrors := make([]error, 0)
 	for _, pod := range podsToEvict {
 		if err := h.evictPod(ctx, pod); err != nil {
-			h.logger.Warn("Failed to evict pod", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name), "error", err)
+			h.logger.Warn("[handlers.kubernetes] failed to evict pod", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name), "error", err)
 			evictionErrors = append(evictionErrors, err)
 		}
 	}
@@ -294,17 +294,17 @@ func (h *KubernetesHandler) drainNode(ctx context.Context, nodeName string) erro
 	}
 
 	if len(evictionErrors) > 0 {
-		h.logger.Warn("Some pods failed to evict gracefully", "error_count", len(evictionErrors))
+		h.logger.Warn("[handlers.kubernetes] some pods failed to evict gracefully", "error_count", len(evictionErrors))
 		return fmt.Errorf("failed to evict %d pods", len(evictionErrors))
 	}
 
-	h.logger.Info("Successfully evicted all pods", "node_name", nodeName)
+	h.logger.Info("[handlers.kubernetes] successfully evicted all pods", "node_name", nodeName)
 	return nil
 }
 
 // forceEvictPods performs forced eviction when normal drain fails
 func (h *KubernetesHandler) forceEvictPods(ctx context.Context, nodeName string) error {
-	h.logger.Warn("Performing force eviction", "node_name", nodeName)
+	h.logger.Warn("[handlers.kubernetes] performing force eviction", "node_name", nodeName)
 
 	// List remaining pods on the node
 	pods, err := h.getPodList(ctx, nodeName)
@@ -316,11 +316,11 @@ func (h *KubernetesHandler) forceEvictPods(ctx context.Context, nodeName string)
 	podsToEvict := h.filterPodsForEviction(pods)
 
 	if len(podsToEvict) == 0 {
-		h.logger.Info("No pods remaining to force evict", "node_name", nodeName)
+		h.logger.Info("[handlers.kubernetes] no pods remaining to force evict", "node_name", nodeName)
 		return nil
 	}
 
-	h.logger.Info("Force evicting pods", "node_name", nodeName, "pods_to_evict", len(podsToEvict))
+	h.logger.Info("[handlers.kubernetes] force evicting pods", "node_name", nodeName, "pods_to_evict", len(podsToEvict))
 
 	// Force delete pods with grace period 0
 	gracePeriodSeconds := int64(0)
@@ -331,13 +331,13 @@ func (h *KubernetesHandler) forceEvictPods(ctx context.Context, nodeName string)
 	for _, pod := range podsToEvict {
 		err := h.client.CoreV1().Pods(pod.Namespace).Delete(ctx, pod.Name, deleteOptions)
 		if err != nil && !apierrors.IsNotFound(err) {
-			h.logger.Warn("Failed to force delete pod", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name), "error", err)
+			h.logger.Warn("[handlers.kubernetes] failed to force delete pod", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name), "error", err)
 		} else {
-			h.logger.Debug("Force deleted pod", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
+			h.logger.Debug("[handlers.kubernetes] force deleted pod", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
 		}
 	}
 
-	h.logger.Info("Completed force eviction", "node_name", nodeName)
+	h.logger.Info("[handlers.kubernetes] completed force eviction", "node_name", nodeName)
 	return nil
 }
 
@@ -348,7 +348,7 @@ func (h *KubernetesHandler) markNodeTerminated(ctx context.Context, event cloud.
 		nodeName = event.NodeName
 	}
 
-	h.logger.Debug("Marking node as terminated", "node_name", nodeName)
+	h.logger.Debug("[handlers.kubernetes] marking node as terminated", "node_name", nodeName)
 
 	// Create labels and taints for termination
 	labels := map[string]string{
@@ -409,7 +409,7 @@ func (h *KubernetesHandler) markNodeTerminated(ctx context.Context, event cloud.
 		return fmt.Errorf("failed to update node %s with termination labels/taints: %w", nodeName, err)
 	}
 
-	h.logger.Info("Successfully marked node as terminated", "node_name", nodeName)
+	h.logger.Info("[handlers.kubernetes] successfully marked node as terminated", "node_name", nodeName)
 	return nil
 }
 
@@ -418,7 +418,7 @@ func (h *KubernetesHandler) getPodList(ctx context.Context, nodeName string) ([]
 	// Use field selector to get pods on specific node
 	fieldSelector := fields.SelectorFromSet(fields.Set{"spec.nodeName": nodeName})
 
-	h.logger.Debug("Listing pods from all namespaces", "node_name", nodeName)
+	h.logger.Debug("[handlers.kubernetes] listing pods from all namespaces", "node_name", nodeName)
 
 	// Use empty namespace to list pods from all namespaces
 	podList, err := h.client.CoreV1().Pods("").List(ctx, metav1.ListOptions{
@@ -448,19 +448,19 @@ func (h *KubernetesHandler) filterPodsForEviction(pods []corev1.Pod) []corev1.Po
 
 		// Skip mirror pods (static pods)
 		if _, exists := pod.Annotations[corev1.MirrorPodAnnotationKey]; exists {
-			h.logger.Debug("Skipping mirror pod", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
+			h.logger.Debug("[handlers.kubernetes] skipping mirror pod", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
 			continue
 		}
 
 		// Skip DaemonSet pods if configured
 		if h.skipDaemonSets && h.isDaemonSetPod(pod) {
-			h.logger.Debug("Skipping DaemonSet pod", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
+			h.logger.Debug("[handlers.kubernetes] skipping daemonset pod", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
 			continue
 		}
 
 		// Skip kube-system critical pods unless forced
 		if h.isCriticalSystemPod(pod) {
-			h.logger.Debug("Skipping critical system pod", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
+			h.logger.Debug("[handlers.kubernetes] skipping critical system pod", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
 			continue
 		}
 
@@ -521,7 +521,7 @@ func (h *KubernetesHandler) evictPod(ctx context.Context, pod corev1.Pod) error 
 	if err != nil {
 		// If eviction fails due to PDB and we're ignoring PDB, try direct deletion
 		if apierrors.IsTooManyRequests(err) && h.ignorePodDisruption {
-			h.logger.Debug("Eviction blocked by PDB, ignoring and deleting directly", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
+			h.logger.Debug("[handlers.kubernetes] eviction blocked by pdb, ignoring and deleting directly", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
 			gracePeriodSeconds := int64(h.gracePeriodSeconds)
 			deleteOptions := metav1.DeleteOptions{
 				GracePeriodSeconds: &gracePeriodSeconds,
@@ -531,7 +531,7 @@ func (h *KubernetesHandler) evictPod(ctx context.Context, pod corev1.Pod) error 
 		return fmt.Errorf("failed to evict pod %s/%s: %w", pod.Namespace, pod.Name, err)
 	}
 
-	h.logger.Debug("Successfully evicted pod", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
+	h.logger.Debug("[handlers.kubernetes] successfully evicted pod", "pod", fmt.Sprintf("%s/%s", pod.Namespace, pod.Name))
 	return nil
 }
 
@@ -541,7 +541,7 @@ func (h *KubernetesHandler) waitForPodEviction(ctx context.Context, pods []corev
 		return nil
 	}
 
-	h.logger.Debug("Waiting for pod eviction", "pod_count", len(pods))
+	h.logger.Debug("[handlers.kubernetes] waiting for pod eviction", "pod_count", len(pods))
 
 	// Create a map for quick lookup
 	podMap := make(map[string]bool)
@@ -569,16 +569,16 @@ func (h *KubernetesHandler) waitForPodEviction(ctx context.Context, pods []corev
 					continue
 				}
 				// Some other error, count as remaining
-				h.logger.Debug("Error checking pod status", "pod", podKey, "error", err)
+				h.logger.Debug("[handlers.kubernetes] error checking pod status", "pod", podKey, "error", err)
 			}
 
 			remainingPods++
 		}
 
-		h.logger.Debug("Waiting for pod eviction", "remaining_pods", remainingPods)
+		h.logger.Debug("[handlers.kubernetes] waiting for pod eviction", "remaining_pods", remainingPods)
 
 		if remainingPods == 0 {
-			h.logger.Info("All pods evicted successfully")
+			h.logger.Info("[handlers.kubernetes] all pods evicted successfully")
 			return true, nil
 		}
 

@@ -97,7 +97,7 @@ func (h *TelegramHandler) Name() string {
 
 // HandleTerminationEvent sends a termination event notification to Telegram
 func (h *TelegramHandler) HandleTerminationEvent(ctx context.Context, event cloud.TerminationEvent) error {
-	h.logger.Info("Sending termination event notification to Telegram",
+	h.logger.Info("[handlers.telegram] sending termination event notification to telegram",
 		"node_id", event.NodeID,
 		"node_name", event.NodeName,
 		"reason", event.Reason,
@@ -112,18 +112,18 @@ func (h *TelegramHandler) HandleTerminationEvent(ctx context.Context, event clou
 	// PRIORITY 1: If send_raw is enabled, send raw data FIRST and ALWAYS
 	// This ensures we capture the incident data before any processing can fail
 	if h.sendRaw {
-		h.logger.Debug("Attempting to send raw data (priority #1)")
+		h.logger.Debug("[handlers.telegram] attempting to send raw data (priority #1)")
 		func() {
 			defer func() {
 				if r := recover(); r != nil {
-					h.logger.Error("Panic while sending raw data, attempting emergency fallback", "panic", r)
+					h.logger.Error("[handlers.telegram] panic while sending raw data, attempting emergency fallback", "panic", r)
 					// Even if formatRawMessage panics, try to send SOMETHING
 					emergencyMessage := h.createEmergencyRawMessage(event, fmt.Sprintf("PANIC: %v", r))
 					if err := h.sendMessage(ctx, emergencyMessage); err != nil {
-						h.logger.Error("Emergency raw message also failed", "error", err)
+						h.logger.Error("[handlers.telegram] emergency raw message also failed", "error", err)
 						rawMessageErr = fmt.Errorf("panic and emergency fallback failed: panic=%v, emergency_err=%v", r, err)
 					} else {
-						h.logger.Warn("Emergency raw message sent after panic", "panic", r)
+						h.logger.Warn("[handlers.telegram] emergency raw message sent after panic", "panic", r)
 						rawDataSent = true
 					}
 				}
@@ -132,7 +132,7 @@ func (h *TelegramHandler) HandleTerminationEvent(ctx context.Context, event clou
 			rawMessage := h.formatRawMessage(event)
 			if err := h.sendMessage(ctx, rawMessage); err != nil {
 				rawMessageErr = err
-				h.logger.Error("Failed to send raw data (attempting emergency fallback)",
+				h.logger.Error("[handlers.telegram] failed to send raw data (attempting emergency fallback)",
 					"node_id", event.NodeID,
 					"error", err,
 				)
@@ -140,14 +140,14 @@ func (h *TelegramHandler) HandleTerminationEvent(ctx context.Context, event clou
 				// Try emergency fallback even if regular raw message fails
 				emergencyMessage := h.createEmergencyRawMessage(event, fmt.Sprintf("Raw send failed: %v", err))
 				if emergencyErr := h.sendMessage(ctx, emergencyMessage); emergencyErr != nil {
-					h.logger.Error("Emergency raw message also failed",
+					h.logger.Error("[handlers.telegram] emergency raw message also failed",
 						"node_id", event.NodeID,
 						"original_error", err,
 						"emergency_error", emergencyErr,
 					)
 					rawMessageErr = fmt.Errorf("both raw and emergency messages failed: raw=%v, emergency=%v", err, emergencyErr)
 				} else {
-					h.logger.Warn("Emergency raw message sent after regular raw message failed",
+					h.logger.Warn("[handlers.telegram] emergency raw message sent after regular raw message failed",
 						"node_id", event.NodeID,
 						"original_error", err,
 					)
@@ -155,7 +155,7 @@ func (h *TelegramHandler) HandleTerminationEvent(ctx context.Context, event clou
 					rawMessageErr = nil // Clear error since emergency succeeded
 				}
 			} else {
-				h.logger.Info("Raw data sent successfully (priority #1)",
+				h.logger.Info("[handlers.telegram] raw data sent successfully (priority #1)",
 					"node_id", event.NodeID,
 					"node_name", event.NodeName,
 				)
@@ -168,7 +168,7 @@ func (h *TelegramHandler) HandleTerminationEvent(ctx context.Context, event clou
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
-				h.logger.Error("Panic while formatting message (raw data already sent)", "panic", r)
+				h.logger.Error("[handlers.telegram] panic while formatting message (raw data already sent)", "panic", r)
 				formattedMessageErr = fmt.Errorf("panic during message formatting: %v", r)
 			}
 		}()
@@ -176,13 +176,13 @@ func (h *TelegramHandler) HandleTerminationEvent(ctx context.Context, event clou
 		message := h.formatMessage(event)
 		if err := h.sendMessage(ctx, message); err != nil {
 			formattedMessageErr = err
-			h.logger.Warn("Failed to send formatted Telegram notification",
+			h.logger.Warn("[handlers.telegram] failed to send formatted telegram notification",
 				"node_id", event.NodeID,
 				"node_name", event.NodeName,
 				"error", err,
 			)
 		} else {
-			h.logger.Debug("Successfully sent formatted notification",
+			h.logger.Debug("[handlers.telegram] successfully sent formatted notification",
 				"node_id", event.NodeID,
 				"node_name", event.NodeName,
 			)
@@ -193,7 +193,7 @@ func (h *TelegramHandler) HandleTerminationEvent(ctx context.Context, event clou
 	if h.sendRaw {
 		// When send_raw is enabled, success is determined by whether raw data was sent
 		if rawDataSent {
-			h.logger.Info("Telegram notification SUCCESS - raw data sent (incident captured)",
+			h.logger.Info("[handlers.telegram] notification SUCCESS - raw data sent (incident captured)",
 				"node_id", event.NodeID,
 				"node_name", event.NodeName,
 				"formatted_sent", formattedMessageErr == nil,
@@ -202,7 +202,7 @@ func (h *TelegramHandler) HandleTerminationEvent(ctx context.Context, event clou
 			return nil
 		} else {
 			// This should be extremely rare since we have multiple fallbacks
-			h.logger.Error("CRITICAL: Failed to send raw data despite all fallbacks",
+			h.logger.Error("[handlers.telegram] CRITICAL: failed to send raw data despite all fallbacks",
 				"node_id", event.NodeID,
 				"node_name", event.NodeName,
 				"raw_error", rawMessageErr,
@@ -213,14 +213,14 @@ func (h *TelegramHandler) HandleTerminationEvent(ctx context.Context, event clou
 	} else {
 		// Raw data not enabled, only care about formatted message
 		if formattedMessageErr != nil {
-			h.logger.Error("Failed to send Telegram notification",
+			h.logger.Error("[handlers.telegram] failed to send telegram notification",
 				"node_id", event.NodeID,
 				"node_name", event.NodeName,
 				"error", formattedMessageErr,
 			)
 			return fmt.Errorf("failed to send Telegram notification: %w", formattedMessageErr)
 		}
-		h.logger.Info("Successfully sent Telegram notification",
+		h.logger.Info("[handlers.telegram] successfully sent telegram notification",
 			"node_id", event.NodeID,
 			"node_name", event.NodeName,
 		)
@@ -233,7 +233,7 @@ func (h *TelegramHandler) formatMessage(event cloud.TerminationEvent) string {
 	// Add panic recovery to ensure we always return something
 	defer func() {
 		if r := recover(); r != nil {
-			h.logger.Error("Panic in formatMessage", "panic", r)
+			h.logger.Error("[handlers.telegram] panic in formatMessage", "panic", r)
 		}
 	}()
 
@@ -338,14 +338,14 @@ func (h *TelegramHandler) formatRawMessage(event cloud.TerminationEvent) string 
 	// Always try to send something, even if JSON marshaling fails
 	defer func() {
 		if r := recover(); r != nil {
-			h.logger.Error("Panic in formatRawMessage", "panic", r)
+			h.logger.Error("[handlers.telegram] panic in formatRawMessage", "panic", r)
 		}
 	}()
 
 	// Try to convert event to JSON with pretty formatting
 	jsonData, err := json.MarshalIndent(event, "", "  ")
 	if err != nil {
-		h.logger.Error("Failed to marshal event to JSON, sending fallback data", "error", err)
+		h.logger.Error("[handlers.telegram] failed to marshal event to JSON, sending fallback data", "error", err)
 
 		// Create a fallback message with basic event information
 		fallbackData := map[string]interface{}{
@@ -367,7 +367,7 @@ func (h *TelegramHandler) formatRawMessage(event cloud.TerminationEvent) string 
 			jsonData = fallbackJSON
 		} else {
 			// If even the fallback fails, create a simple text representation
-			h.logger.Error("Failed to marshal fallback data", "fallback_error", fallbackErr)
+			h.logger.Error("[handlers.telegram] failed to marshal fallback data", "fallback_error", fallbackErr)
 			return fmt.Sprintf(`📊 *Raw Event Data* (Fallback)
 
 ❌ JSON Marshal Error: %s
@@ -498,7 +498,7 @@ func (h *TelegramHandler) sendMessage(ctx context.Context, text string) error {
 
 	req.Header.Set("Content-Type", "application/json")
 
-	h.logger.Debug("Sending Telegram message", "url", url, "chat_id", h.chatID)
+	h.logger.Debug("[handlers.telegram] sending telegram message", "url", url, "chat_id", h.chatID)
 
 	// Send the request
 	resp, err := h.httpClient.Do(req)
@@ -522,7 +522,7 @@ func (h *TelegramHandler) sendMessage(ctx context.Context, text string) error {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
-	h.logger.Debug("Telegram message sent successfully", "chat_id", h.chatID)
+	h.logger.Debug("[handlers.telegram] telegram message sent successfully", "chat_id", h.chatID)
 
 	return nil
 }
@@ -572,19 +572,5 @@ func ValidateConfig(config TelegramConfig) error {
 		return fmt.Errorf("timeout cannot be negative")
 	}
 
-	return nil
-}
-
-// TestConnection tests the connection to Telegram by sending a test message
-func (h *TelegramHandler) TestConnection(ctx context.Context) error {
-	testMessage := "🧪 *Evacuator Test Message*\n\nThis is a test message to verify Telegram integration is working correctly."
-
-	h.logger.Info("Testing Telegram connection", "chat_id", h.chatID)
-
-	if err := h.sendMessage(ctx, testMessage); err != nil {
-		return fmt.Errorf("test message failed: %w", err)
-	}
-
-	h.logger.Info("Telegram connection test successful", "chat_id", h.chatID)
 	return nil
 }

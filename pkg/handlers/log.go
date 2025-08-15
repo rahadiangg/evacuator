@@ -30,7 +30,7 @@ func (h *LogHandler) Name() string {
 
 // HandleTerminationEvent logs the termination event
 func (h *LogHandler) HandleTerminationEvent(ctx context.Context, event cloud.TerminationEvent) error {
-	h.logger.Warn("Node termination event received",
+	h.logger.Warn("[handlers.log] node termination event received",
 		"node_id", event.NodeID,
 		"node_name", event.NodeName,
 		"reason", event.Reason,
