@@ -2,13 +2,16 @@
 # This shows the actual YAML structure supported by the application
 # Most users should use environment variables instead of config files
 #
-# VIPER CONFIGURATION SYSTEM:
-# The application now uses Viper for configuration management, providing:
-# - Automatic precedence: CLI flags > env vars > config file > defaults
-# - Support for multiple config formats (YAML, JSON, TOML, etc.)
-# - Environment variable prefix support (EVACUATOR_*)
-# - Automatic type conversion and validation
-# - No manual merging required between config sources
+# CONFIGURATION SYSTEM:
+# The application supports configuration through:
+# - Environment variables (recommended for production)
+# - YAML configuration files (good for development/testing)
+# - Built-in defaults
+#
+# Configuration precedence (highest to lowest priority):
+# 1. Environment variables
+# 2. Configuration file values
+# 3. Default values
 
 app:
   dry_run: false   # Set to true to simulate actions without actually draining nodes
@@ -75,60 +78,123 @@ logging:
   format: "json"       # json, text  
   output: "stdout"     # stdout, stderr, or file path
 
-# VIPER ENVIRONMENT VARIABLE MAPPINGS:
+# ===============================================================================
+# ENVIRONMENT VARIABLES CONFIGURATION
+# ===============================================================================
 # 
-# Environment variables follow the YAML structure exactly:
-# Section_Key becomes SECTION_KEY (e.g., app.dry_run → APP_DRY_RUN)
+# Environment variables are the recommended way to configure this application.
+# Variables follow the YAML structure: section.key becomes SECTION_KEY
+# Example: app.dry_run → APP_DRY_RUN, monitoring.provider → MONITORING_PROVIDER
 #
-# You can also use the EVACUATOR_ prefix for all variables:
-# APP_DRY_RUN or EVACUATOR_APP_DRY_RUN both work
+# ===== APPLICATION SETTINGS =====
+# APP_DRY_RUN="false"                    # app.dry_run - Enable dry-run mode (no actual actions)
+# APP_NODE_NAME=""                       # app.node_name - Node name to monitor (auto-detected if empty)
 #
-# Examples:
-#   APP_DRY_RUN=true                                         # app.dry_run
-#   APP_NODE_NAME="node-1"                                   # app.node_name
-#   MONITORING_PROVIDER=alibaba                              # monitoring.provider  
-#   MONITORING_AUTO_DETECT=false                             # monitoring.auto_detect
-#   MONITORING_EVENT_BUFFER_SIZE=200                         # monitoring.event_buffer_size
-#   MONITORING_POLL_INTERVAL=5s                              # monitoring.poll_interval
-#   MONITORING_PROVIDER_TIMEOUT=3s                           # monitoring.provider_timeout
-#   MONITORING_PROVIDER_RETRIES=3                            # monitoring.provider_retries
-#   HANDLERS_LOG_ENABLED=true                                # handlers.log.enabled
-#   HANDLERS_KUBERNETES_ENABLED=true                         # handlers.kubernetes.enabled
-#   HANDLERS_KUBERNETES_DRAIN_TIMEOUT_SECONDS=90             # handlers.kubernetes.drain_timeout_seconds
-#   HANDLERS_KUBERNETES_FORCE_EVICTION_AFTER=90s             # handlers.kubernetes.force_eviction_after
-#   HANDLERS_KUBERNETES_SKIP_DAEMON_SETS=true                # handlers.kubernetes.skip_daemon_sets
-#   HANDLERS_KUBERNETES_DELETE_EMPTY_DIR_DATA=false          # handlers.kubernetes.delete_empty_dir_data
-#   HANDLERS_KUBERNETES_IGNORE_POD_DISRUPTION=true           # handlers.kubernetes.ignore_pod_disruption
-#   HANDLERS_KUBERNETES_GRACE_PERIOD_SECONDS=10              # handlers.kubernetes.grace_period_seconds
-#   HANDLERS_KUBERNETES_KUBECONFIG="/path/to/kubeconfig"      # handlers.kubernetes.kubeconfig
-#   HANDLERS_KUBERNETES_IN_CLUSTER=true                      # handlers.kubernetes.in_cluster
-#   HANDLERS_TELEGRAM_ENABLED=true                           # handlers.telegram.enabled
-#   HANDLERS_TELEGRAM_BOT_TOKEN="bot123456:ABC-DEF"          # handlers.telegram.bot_token
-#   HANDLERS_TELEGRAM_CHAT_ID="-100123456789"                # handlers.telegram.chat_id
-#   HANDLERS_TELEGRAM_TIMEOUT=10s                            # handlers.telegram.timeout
-#   HANDLERS_TELEGRAM_SEND_RAW=false                         # handlers.telegram.send_raw
-#   LOGGING_LEVEL=debug                                      # logging.level
-#   LOGGING_FORMAT=text                                      # logging.format
-#   LOGGING_OUTPUT=stdout                                    # logging.output
+# ===== MONITORING SETTINGS =====
+# MONITORING_PROVIDER=""                 # monitoring.provider - Force cloud provider: "alibaba"
+# MONITORING_AUTO_DETECT="true"          # monitoring.auto_detect - Auto-detect cloud provider
+# MONITORING_POLL_INTERVAL="5s"          # monitoring.poll_interval - Check interval (3s-30s)
+# MONITORING_PROVIDER_TIMEOUT="3s"       # monitoring.provider_timeout - API call timeout
+# MONITORING_PROVIDER_RETRIES="3"        # monitoring.provider_retries - Number of retry attempts
+# MONITORING_EVENT_BUFFER_SIZE="100"     # monitoring.event_buffer_size - Event buffer size
 #
-# With EVACUATOR_ prefix (optional):
-#   EVACUATOR_APP_DRY_RUN=true                               # app.dry_run
-#   EVACUATOR_MONITORING_PROVIDER=alibaba                    # monitoring.provider
-#   EVACUATOR_HANDLERS_KUBERNETES_KUBECONFIG="/path/to/kubeconfig"  # handlers.kubernetes.kubeconfig
-#   EVACUATOR_HANDLERS_KUBERNETES_IN_CLUSTER=true            # handlers.kubernetes.in_cluster
-#   EVACUATOR_LOGGING_LEVEL=debug                            # logging.level
-#   (All above variables work with EVACUATOR_ prefix)
+# ===== HANDLER SETTINGS =====
+# HANDLERS_LOG_ENABLED="true"            # handlers.log.enabled - Enable log handler
+# HANDLERS_KUBERNETES_ENABLED="true"     # handlers.kubernetes.enabled - Enable Kubernetes handler
 #
-# Both formats work simultaneously! Environment variables will override file values.
+# ===== KUBERNETES DRAIN SETTINGS =====
+# HANDLERS_KUBERNETES_DRAIN_TIMEOUT_SECONDS="90"        # handlers.kubernetes.drain_timeout_seconds
+# HANDLERS_KUBERNETES_FORCE_EVICTION_AFTER="90s"        # handlers.kubernetes.force_eviction_after
+# HANDLERS_KUBERNETES_SKIP_DAEMON_SETS="true"           # handlers.kubernetes.skip_daemon_sets
+# HANDLERS_KUBERNETES_DELETE_EMPTY_DIR_DATA="false"     # handlers.kubernetes.delete_empty_dir_data
+# HANDLERS_KUBERNETES_IGNORE_POD_DISRUPTION="true"      # handlers.kubernetes.ignore_pod_disruption
+# HANDLERS_KUBERNETES_GRACE_PERIOD_SECONDS="10"         # handlers.kubernetes.grace_period_seconds
+# HANDLERS_KUBERNETES_KUBECONFIG=""                     # handlers.kubernetes.kubeconfig - Path to kubeconfig
+# HANDLERS_KUBERNETES_IN_CLUSTER="true"                 # handlers.kubernetes.in_cluster - Use in-cluster config
 #
-# Configuration file override:
-#   CONFIG_FILE="/path/to/custom/config.yaml"
-
-# PRECEDENCE ORDER (Viper automatic handling):
-# 1. CLI flags (if implemented)
-# 2. Environment variables
-# 3. Configuration file values
-# 4. Default values
+# ===== TELEGRAM NOTIFICATION SETTINGS =====
+# HANDLERS_TELEGRAM_ENABLED="false"      # handlers.telegram.enabled - Enable Telegram notifications
+# HANDLERS_TELEGRAM_BOT_TOKEN=""         # handlers.telegram.bot_token - Telegram bot token
+# HANDLERS_TELEGRAM_CHAT_ID=""           # handlers.telegram.chat_id - Chat ID for notifications
+# HANDLERS_TELEGRAM_TIMEOUT="10s"        # handlers.telegram.timeout - HTTP request timeout
+# HANDLERS_TELEGRAM_SEND_RAW="false"     # handlers.telegram.send_raw - Send raw event data
 #
-# This means environment variables will always override file values,
-# making it safe to use config files with environment-specific overrides.
+# ===== LOGGING SETTINGS =====
+# LOGGING_LEVEL="info"                   # logging.level - Log level (debug/info/warn/error)
+# LOGGING_FORMAT="json"                  # logging.format - Log format (json/text)
+# LOGGING_OUTPUT="stdout"                # logging.output - Log output destination
+#
+# ===== CONFIGURATION FILE OVERRIDE =====
+# CONFIG_FILE=""                         # Path to custom configuration file
+#
+# ===============================================================================
+# USAGE EXAMPLES
+# ===============================================================================
+#
+# Basic usage:
+#   APP_DRY_RUN=true LOGGING_LEVEL=debug ./evacuator
+#   MONITORING_PROVIDER=alibaba HANDLERS_TELEGRAM_ENABLED=true ./evacuator
+#
+# With custom config file:
+#   CONFIG_FILE="./my-config.yaml" ./evacuator
+#
+# Complete production example:
+#   APP_DRY_RUN=false \
+#   MONITORING_PROVIDER=alibaba \
+#   HANDLERS_TELEGRAM_ENABLED=true \
+#   HANDLERS_TELEGRAM_BOT_TOKEN="bot123456:ABC-DEF" \
+#   HANDLERS_TELEGRAM_CHAT_ID="-100123456789" \
+#   LOGGING_LEVEL=info \
+#   LOGGING_FORMAT=json \
+#   ./evacuator
+#
+# ===============================================================================
+# KUBERNETES DAEMONSET CONFIGURATION
+# ===============================================================================
+#
+# Example environment variables for Kubernetes DaemonSet deployment:
+#
+# env:
+#   - name: APP_DRY_RUN
+#     value: "false"
+#   - name: LOGGING_LEVEL  
+#     value: "info"
+#   - name: LOGGING_FORMAT
+#     value: "json"
+#   - name: APP_NODE_NAME
+#     valueFrom:
+#       fieldRef:
+#         fieldPath: spec.nodeName
+#   - name: MONITORING_POLL_INTERVAL
+#     value: "5s"
+#   - name: HANDLERS_TELEGRAM_ENABLED
+#     value: "true"
+#   - name: HANDLERS_TELEGRAM_BOT_TOKEN
+#     valueFrom:
+#       secretKeyRef:
+#         name: evacuator-telegram
+#         key: bot-token
+#   - name: HANDLERS_TELEGRAM_CHAT_ID
+#     valueFrom:
+#       secretKeyRef:
+#         name: evacuator-telegram
+#         key: chat-id
+#
+# ===============================================================================
+# TELEGRAM SETUP GUIDE
+# ===============================================================================
+#
+# 1. Create a bot:
+#    - Message @BotFather on Telegram
+#    - Send /newbot and follow instructions
+#    - Save the bot token
+#
+# 2. Get chat ID:
+#    - For private chat: Start chat with bot, send a message, then visit:
+#      https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates
+#    - For group chat: Add bot to group, send message mentioning bot, check same URL
+#
+# 3. Test connection:
+#    curl -X POST "https://api.telegram.org/bot<BOT_TOKEN>/sendMessage" \
+#      -H "Content-Type: application/json" \
+#      -d '{"chat_id": "<CHAT_ID>", "text": "Test from evacuator"}'

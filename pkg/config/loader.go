@@ -117,11 +117,9 @@ func setupEnvironmentVariables(v *viper.Viper) {
 		"LOGGING_OUTPUT":                            "logging.output",
 	}
 
-	// Bind environment variables (supports both APP_* and EVACUATOR_APP_* formats)
+	// Bind environment variables (direct mapping only)
 	for envVar, configKey := range consistentEnvMappings {
 		v.BindEnv(configKey, envVar)
-		// Also bind with EVACUATOR_ prefix
-		v.BindEnv(configKey, "EVACUATOR_"+envVar)
 	}
 
 	// Special handling for CONFIG_FILE environment variable
