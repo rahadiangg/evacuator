@@ -336,7 +336,7 @@ func (p *Provider) getMetadataToken(ctx context.Context) (string, error) {
 	}
 
 	// Set the token TTL header (validity period in seconds)
-	req.Header.Set("X-aliyun-ecs-metadata-token-ttl-seconds", "21600") // 6 hours
+	req.Header.Set("X-aliyun-ecs-metadata-token-ttl-seconds", "60")
 
 	resp, err := p.httpClient.Do(req)
 	if err != nil {
