@@ -96,8 +96,7 @@ data:
 
     log:
       level: "info"        # debug, info, warn, error
-      format: "json"       # json, text  
-      output: "stdout"     # stdout, stderr, or file path
+      format: "json"       # json, text
 ---
 apiVersion: apps/v1
 kind: DaemonSet

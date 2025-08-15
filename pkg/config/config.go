@@ -128,9 +128,6 @@ type LoggingConfig struct {
 
 	// Format is the log format (json, text)
 	Format string `yaml:"format" json:"format" mapstructure:"format"`
-
-	// Output is the log output (stdout, stderr, file path)
-	Output string `yaml:"output" json:"output" mapstructure:"output"`
 }
 
 // Validate validates the configuration

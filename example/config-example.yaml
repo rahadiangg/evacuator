@@ -74,8 +74,7 @@ handlers:
 
 log:
   level: "info"        # debug, info, warn, error
-  format: "json"       # json, text  
-  output: "stdout"     # stdout, stderr, or file path
+  format: "json"       # json, text
 
 # ===============================================================================
 # ENVIRONMENT VARIABLES CONFIGURATION
@@ -121,7 +120,6 @@ log:
 # ===== LOGGING SETTINGS =====
 # LOG_LEVEL="info"                   # log.level - Log level (debug/info/warn/error)
 # LOG_FORMAT="json"                  # log.format - Log format (json/text)
-# LOG_OUTPUT="stdout"                # log.output - Log output destination
 #
 # ===== CONFIGURATION FILE OVERRIDE =====
 # CONFIG_FILE=""                         # Path to custom configuration file

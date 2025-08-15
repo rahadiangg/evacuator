@@ -125,7 +125,6 @@ func clearEnvironmentVariables() {
 		"KUBERNETES_NODE_NAME",
 		"LOG_LEVEL",
 		"LOG_FORMAT",
-		"LOG_OUTPUT",
 		"CONFIG_FILE",
 		// Legacy variable names (for cleanup)
 		"APP_DRY_RUN",

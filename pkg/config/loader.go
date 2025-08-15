@@ -74,7 +74,6 @@ func setDefaults(v *viper.Viper) {
 	// Logging defaults
 	v.SetDefault("log.level", "info")
 	v.SetDefault("log.format", "json")
-	v.SetDefault("log.output", "stdout")
 }
 
 // setupEnvironmentVariables configures Viper to read from environment variables
@@ -110,7 +109,6 @@ func setupEnvironmentVariables(v *viper.Viper) {
 		"HANDLERS_TELEGRAM_SEND_RAW":                "handlers.telegram.send_raw",
 		"LOG_LEVEL":                                 "log.level",
 		"LOG_FORMAT":                                "log.format",
-		"LOG_OUTPUT":                                "log.output",
 	}
 
 	// Bind environment variables (direct mapping only)
