@@ -13,14 +13,12 @@
 # - Automatic type conversion
 # - No manual merging required
 #
-# ENVIRONMENT VARIABLE FORMATS:
-# 1. CONSISTENT FORMAT (matches YAML structure exactly):
-#    APP_DRY_RUN, MONITORING_PROVIDER, HANDLERS_LOG_ENABLED, etc.
-# 2. PREFIXED FORMAT (with EVACUATOR_ prefix):
-#    EVACUATOR_APP_DRY_RUN, EVACUATOR_MONITORING_PROVIDER, etc.
+# ENVIRONMENT VARIABLE FORMAT:
+# Variables match the YAML structure exactly: section.key becomes SECTION_KEY
+# You can optionally use the EVACUATOR_ prefix for any variable
+# Examples: APP_DRY_RUN or EVACUATOR_APP_DRY_RUN
 
-# ===== CONSISTENT FORMAT (RECOMMENDED) =====
-# These match the YAML structure exactly: section_key becomes SECTION_KEY
+# ===== ENVIRONMENT VARIABLES =====
 
 # APPLICATION SETTINGS
 # export APP_DRY_RUN="false"                    # app.dry_run - Enable dry-run mode
@@ -45,6 +43,8 @@
 # export HANDLERS_KUBERNETES_DELETE_EMPTY_DIR_DATA="false"     # handlers.kubernetes.delete_empty_dir_data
 # export HANDLERS_KUBERNETES_IGNORE_POD_DISRUPTION="true"      # handlers.kubernetes.ignore_pod_disruption
 # export HANDLERS_KUBERNETES_GRACE_PERIOD_SECONDS="10"         # handlers.kubernetes.grace_period_seconds
+# export HANDLERS_KUBERNETES_KUBECONFIG=""                     # handlers.kubernetes.kubeconfig - Kubeconfig path
+# export HANDLERS_KUBERNETES_IN_CLUSTER="true"                 # handlers.kubernetes.in_cluster - Use in-cluster config
 
 # TELEGRAM NOTIFICATION SETTINGS
 # export HANDLERS_TELEGRAM_ENABLED="false"      # handlers.telegram.enabled - Enable Telegram
@@ -52,10 +52,6 @@
 # export HANDLERS_TELEGRAM_CHAT_ID=""           # handlers.telegram.chat_id - Chat ID
 # export HANDLERS_TELEGRAM_TIMEOUT="10s"        # handlers.telegram.timeout - HTTP timeout
 # export HANDLERS_TELEGRAM_SEND_RAW="false"     # handlers.telegram.send_raw - Send raw data
-
-# KUBERNETES SETTINGS  
-# export KUBERNETES_KUBECONFIG=""               # kubernetes.kubeconfig - Kubeconfig path
-# export KUBERNETES_IN_CLUSTER="true"           # kubernetes.in_cluster - Use in-cluster config
 
 # LOGGING SETTINGS
 # export LOGGING_LEVEL="info"                   # logging.level - Log level (debug/info/warn/error)
@@ -65,34 +61,14 @@
 # CONFIGURATION FILE (optional)
 # export CONFIG_FILE=""                         # Path to custom config file
 
-# ===== PREFIXED FORMAT (with EVACUATOR_ prefix) =====
+# ===== EVACUATOR_ PREFIX (OPTIONAL) =====
 # All above variables can also be prefixed with EVACUATOR_:
+# Examples:
 # export EVACUATOR_APP_DRY_RUN="false"
 # export EVACUATOR_MONITORING_PROVIDER="alibaba"
-# export EVACUATOR_MONITORING_AUTO_DETECT="true"
-# export EVACUATOR_MONITORING_EVENT_BUFFER_SIZE="100"
-# export EVACUATOR_MONITORING_POLL_INTERVAL="5s"
-# export EVACUATOR_MONITORING_PROVIDER_TIMEOUT="3s"
-# export EVACUATOR_MONITORING_PROVIDER_RETRIES="3"
-# export EVACUATOR_HANDLERS_LOG_ENABLED="true"
-# export EVACUATOR_HANDLERS_KUBERNETES_ENABLED="true"
-# export EVACUATOR_HANDLERS_KUBERNETES_DRAIN_TIMEOUT_SECONDS="90"
-# export EVACUATOR_HANDLERS_KUBERNETES_FORCE_EVICTION_AFTER="90s"
-# export EVACUATOR_HANDLERS_KUBERNETES_SKIP_DAEMON_SETS="true"
-# export EVACUATOR_HANDLERS_KUBERNETES_DELETE_EMPTY_DIR_DATA="false"
-# export EVACUATOR_HANDLERS_KUBERNETES_IGNORE_POD_DISRUPTION="true"
-# export EVACUATOR_HANDLERS_KUBERNETES_GRACE_PERIOD_SECONDS="10"
-# export EVACUATOR_HANDLERS_TELEGRAM_ENABLED="false"
-# export EVACUATOR_HANDLERS_TELEGRAM_BOT_TOKEN=""
-# export EVACUATOR_HANDLERS_TELEGRAM_CHAT_ID=""
-# export EVACUATOR_HANDLERS_TELEGRAM_TIMEOUT="10s"
-# export EVACUATOR_HANDLERS_TELEGRAM_SEND_RAW="false"
-# export EVACUATOR_KUBERNETES_KUBECONFIG=""
-# export EVACUATOR_KUBERNETES_IN_CLUSTER="true"
-# export EVACUATOR_APP_NODE_NAME=""
+# export EVACUATOR_HANDLERS_KUBERNETES_KUBECONFIG="/path/to/kubeconfig"
+# export EVACUATOR_HANDLERS_KUBERNETES_IN_CLUSTER="true"
 # export EVACUATOR_LOGGING_LEVEL="info"
-# export EVACUATOR_LOGGING_FORMAT="json"
-# export EVACUATOR_LOGGING_OUTPUT="stdout"
 
 # Telegram Setup Instructions:
 # 1. Create a bot: Message @BotFather on Telegram, send /newbot, follow instructions
@@ -107,11 +83,11 @@
 
 # USAGE EXAMPLES:
 
-# 1. CONSISTENT FORMAT (recommended):
+# 1. Basic usage:
 #    APP_DRY_RUN=true LOGGING_LEVEL=debug ./evacuator
 #    MONITORING_PROVIDER=alibaba HANDLERS_TELEGRAM_ENABLED=true ./evacuator
 
-# 2. PREFIXED FORMAT:
+# 2. With EVACUATOR_ prefix:
 #    EVACUATOR_APP_DRY_RUN=true EVACUATOR_LOGGING_LEVEL=debug ./evacuator
 
 # 3. With custom config file:

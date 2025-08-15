@@ -64,14 +64,11 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("handlers.kubernetes.delete_empty_dir_data", false)
 	v.SetDefault("handlers.kubernetes.ignore_pod_disruption", true)
 	v.SetDefault("handlers.kubernetes.grace_period_seconds", 10)
+	v.SetDefault("handlers.kubernetes.kubeconfig", "")
+	v.SetDefault("handlers.kubernetes.in_cluster", true)
 	v.SetDefault("handlers.telegram.enabled", false)
 	v.SetDefault("handlers.telegram.timeout", 10*time.Second)
 	v.SetDefault("handlers.telegram.send_raw", false)
-
-	// Kubernetes defaults
-	v.SetDefault("kubernetes.in_cluster", true)
-	v.SetDefault("kubernetes.kubeconfig", "")
-	v.SetDefault("kubernetes.node_name", "")
 
 	// Logging defaults
 	v.SetDefault("logging.level", "info")
@@ -108,13 +105,13 @@ func setupEnvironmentVariables(v *viper.Viper) {
 		"HANDLERS_KUBERNETES_DELETE_EMPTY_DIR_DATA": "handlers.kubernetes.delete_empty_dir_data",
 		"HANDLERS_KUBERNETES_IGNORE_POD_DISRUPTION": "handlers.kubernetes.ignore_pod_disruption",
 		"HANDLERS_KUBERNETES_GRACE_PERIOD_SECONDS":  "handlers.kubernetes.grace_period_seconds",
+		"HANDLERS_KUBERNETES_KUBECONFIG":            "handlers.kubernetes.kubeconfig",
+		"HANDLERS_KUBERNETES_IN_CLUSTER":            "handlers.kubernetes.in_cluster",
 		"HANDLERS_TELEGRAM_ENABLED":                 "handlers.telegram.enabled",
 		"HANDLERS_TELEGRAM_BOT_TOKEN":               "handlers.telegram.bot_token",
 		"HANDLERS_TELEGRAM_CHAT_ID":                 "handlers.telegram.chat_id",
 		"HANDLERS_TELEGRAM_TIMEOUT":                 "handlers.telegram.timeout",
 		"HANDLERS_TELEGRAM_SEND_RAW":                "handlers.telegram.send_raw",
-		"KUBERNETES_KUBECONFIG":                     "kubernetes.kubeconfig",
-		"KUBERNETES_IN_CLUSTER":                     "kubernetes.in_cluster",
 		"LOGGING_LEVEL":                             "logging.level",
 		"LOGGING_FORMAT":                            "logging.format",
 		"LOGGING_OUTPUT":                            "logging.output",

@@ -16,9 +16,6 @@ type Config struct {
 	// Event handler configurations
 	Handlers HandlersConfig `yaml:"handlers" json:"handlers" mapstructure:"handlers"`
 
-	// Kubernetes settings
-	Kubernetes KubernetesConfig `yaml:"kubernetes" json:"kubernetes" mapstructure:"kubernetes"`
-
 	// Logging settings
 	Logging LoggingConfig `yaml:"logging" json:"logging" mapstructure:"logging"`
 }
@@ -96,6 +93,12 @@ type KubernetesHandlerConfig struct {
 
 	// GracePeriodSeconds is the grace period for pod termination
 	GracePeriodSeconds int `yaml:"grace_period_seconds" json:"grace_period_seconds" mapstructure:"grace_period_seconds"`
+
+	// KubeConfig is the path to the kubeconfig file
+	KubeConfig string `yaml:"kubeconfig" json:"kubeconfig" mapstructure:"kubeconfig"`
+
+	// InCluster indicates if running inside a Kubernetes cluster
+	InCluster bool `yaml:"in_cluster" json:"in_cluster" mapstructure:"in_cluster"`
 }
 
 // TelegramHandlerConfig contains Telegram handler settings
@@ -114,15 +117,6 @@ type TelegramHandlerConfig struct {
 
 	// SendRaw indicates whether to send raw event data in addition to formatted message
 	SendRaw bool `yaml:"send_raw" json:"send_raw" mapstructure:"send_raw"`
-}
-
-// KubernetesConfig contains Kubernetes client settings
-type KubernetesConfig struct {
-	// KubeConfig is the path to the kubeconfig file
-	KubeConfig string `yaml:"kubeconfig" json:"kubeconfig" mapstructure:"kubeconfig"`
-
-	// InCluster indicates if running inside a Kubernetes cluster
-	InCluster bool `yaml:"in_cluster" json:"in_cluster" mapstructure:"in_cluster"`
 }
 
 // LoggingConfig contains logging settings
@@ -164,15 +158,14 @@ func DefaultConfig() *Config {
 				DeleteEmptyDirData:  false,
 				IgnorePodDisruption: true, // Ignore PDBs during emergency evacuation
 				GracePeriodSeconds:  10,   // Shorter grace period for faster evacuation
+				KubeConfig:          "",   // Empty for default locations
+				InCluster:           true, // Use in-cluster configuration by default
 			},
 			Telegram: TelegramHandlerConfig{
 				Enabled: false, // Disabled by default, requires manual configuration
 				Timeout: 10 * time.Second,
 				SendRaw: false, // Don't send raw data by default
 			},
-		},
-		Kubernetes: KubernetesConfig{
-			InCluster: true,
 		},
 		Logging: LoggingConfig{
 			Level:  "info",

@@ -36,8 +36,8 @@ func TestLoadConfig_Defaults(t *testing.T) {
 		t.Errorf("Expected Log handler to be enabled, got %v", cfg.Handlers.Log.Enabled)
 	}
 
-	if cfg.Kubernetes.InCluster != true {
-		t.Errorf("Expected InCluster to be true, got %v", cfg.Kubernetes.InCluster)
+	if cfg.Handlers.Kubernetes.InCluster != true {
+		t.Errorf("Expected Handlers.Kubernetes.InCluster to be true, got %v", cfg.Handlers.Kubernetes.InCluster)
 	}
 
 	if cfg.Logging.Level != "info" {

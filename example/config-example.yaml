@@ -37,6 +37,8 @@ handlers:
     delete_empty_dir_data: false
     ignore_pod_disruption: true    # Ignore PDBs during emergency evacuation
     grace_period_seconds: 10       # Shorter grace period for faster evacuation
+    kubeconfig: ""                 # Path to kubeconfig file (empty for default locations)
+    in_cluster: true               # Use in-cluster configuration when running as DaemonSet
 
   telegram:
     enabled: false               # Disabled by default, requires manual configuration
@@ -57,14 +59,10 @@ handlers:
 # guarantee incident data is captured. Critical for production monitoring
 # where missing termination events could cause data loss or service disruption.
 
-# Kubernetes client configuration
-kubernetes:
-  kubeconfig: ""       # Path to kubeconfig file (empty for default locations)
-  in_cluster: true     # Use in-cluster configuration when running as DaemonSet
-
 # About Kubernetes Configuration:
-# - in_cluster: true  = Use ServiceAccount (recommended for DaemonSet deployment)
-# - in_cluster: false = Use kubeconfig file (for testing/development)
+# - handlers.kubernetes.in_cluster: true  = Use ServiceAccount (recommended for DaemonSet deployment)
+# - handlers.kubernetes.in_cluster: false = Use kubeconfig file (for testing/development)
+# - handlers.kubernetes.kubeconfig: Path to kubeconfig file (empty for default locations)
 # 
 # About Node Name Configuration:
 # - app.node_name: Auto-detected from APP_NODE_NAME or NODE_NAME environment variable
@@ -79,7 +77,13 @@ logging:
 
 # VIPER ENVIRONMENT VARIABLE MAPPINGS:
 # 
-# 🆕 CONSISTENT FORMAT (matches YAML structure exactly):
+# Environment variables follow the YAML structure exactly:
+# Section_Key becomes SECTION_KEY (e.g., app.dry_run → APP_DRY_RUN)
+#
+# You can also use the EVACUATOR_ prefix for all variables:
+# APP_DRY_RUN or EVACUATOR_APP_DRY_RUN both work
+#
+# Examples:
 #   APP_DRY_RUN=true                                         # app.dry_run
 #   APP_NODE_NAME="node-1"                                   # app.node_name
 #   MONITORING_PROVIDER=alibaba                              # monitoring.provider  
@@ -96,24 +100,22 @@ logging:
 #   HANDLERS_KUBERNETES_DELETE_EMPTY_DIR_DATA=false          # handlers.kubernetes.delete_empty_dir_data
 #   HANDLERS_KUBERNETES_IGNORE_POD_DISRUPTION=true           # handlers.kubernetes.ignore_pod_disruption
 #   HANDLERS_KUBERNETES_GRACE_PERIOD_SECONDS=10              # handlers.kubernetes.grace_period_seconds
+#   HANDLERS_KUBERNETES_KUBECONFIG="/path/to/kubeconfig"      # handlers.kubernetes.kubeconfig
+#   HANDLERS_KUBERNETES_IN_CLUSTER=true                      # handlers.kubernetes.in_cluster
 #   HANDLERS_TELEGRAM_ENABLED=true                           # handlers.telegram.enabled
 #   HANDLERS_TELEGRAM_BOT_TOKEN="bot123456:ABC-DEF"          # handlers.telegram.bot_token
 #   HANDLERS_TELEGRAM_CHAT_ID="-100123456789"                # handlers.telegram.chat_id
 #   HANDLERS_TELEGRAM_TIMEOUT=10s                            # handlers.telegram.timeout
 #   HANDLERS_TELEGRAM_SEND_RAW=false                         # handlers.telegram.send_raw
-#   KUBERNETES_KUBECONFIG="/path/to/kubeconfig"              # kubernetes.kubeconfig
-#   KUBERNETES_IN_CLUSTER=true                               # kubernetes.in_cluster
 #   LOGGING_LEVEL=debug                                      # logging.level
 #   LOGGING_FORMAT=text                                      # logging.format
 #   LOGGING_OUTPUT=stdout                                    # logging.output
 #
-# 🏷️ PREFIXED FORMAT (with EVACUATOR_ prefix):
+# With EVACUATOR_ prefix (optional):
 #   EVACUATOR_APP_DRY_RUN=true                               # app.dry_run
-#   EVACUATOR_APP_NODE_NAME="node-1"                         # app.node_name
 #   EVACUATOR_MONITORING_PROVIDER=alibaba                    # monitoring.provider
-#   EVACUATOR_HANDLERS_LOG_ENABLED=true                      # handlers.log.enabled
-#   EVACUATOR_HANDLERS_TELEGRAM_ENABLED=true                 # handlers.telegram.enabled
-#   EVACUATOR_KUBERNETES_IN_CLUSTER=true                     # kubernetes.in_cluster
+#   EVACUATOR_HANDLERS_KUBERNETES_KUBECONFIG="/path/to/kubeconfig"  # handlers.kubernetes.kubeconfig
+#   EVACUATOR_HANDLERS_KUBERNETES_IN_CLUSTER=true            # handlers.kubernetes.in_cluster
 #   EVACUATOR_LOGGING_LEVEL=debug                            # logging.level
 #   (All above variables work with EVACUATOR_ prefix)
 #

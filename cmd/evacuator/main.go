@@ -161,8 +161,8 @@ func registerEventHandlers(service *cloud.NodeMonitoringService, cfg *config.Con
 	// Register Kubernetes handler
 	if cfg.Handlers.Kubernetes.Enabled {
 		k8sConfig := handlers.KubernetesConfig{
-			KubeConfig:          cfg.Kubernetes.KubeConfig,
-			InCluster:           cfg.Kubernetes.InCluster,
+			KubeConfig:          cfg.Handlers.Kubernetes.KubeConfig,
+			InCluster:           cfg.Handlers.Kubernetes.InCluster,
 			NodeName:            service.GetNodeName(), // Use the node name from monitoring service
 			DrainTimeoutSeconds: cfg.Handlers.Kubernetes.DrainTimeoutSeconds,
 			ForceEvictionAfter:  cfg.Handlers.Kubernetes.ForceEvictionAfter,
