@@ -122,9 +122,6 @@ type ProviderConfig struct {
 	// Name is the provider name
 	Name string `yaml:"name" json:"name"`
 
-	// Enabled indicates if this provider is enabled
-	Enabled bool `yaml:"enabled" json:"enabled"`
-
 	// PollInterval is how often to check for termination events
 	PollInterval time.Duration `yaml:"poll_interval" json:"poll_interval"`
 
@@ -133,15 +130,6 @@ type ProviderConfig struct {
 
 	// Retries is the number of retries for failed requests
 	Retries int `yaml:"retries" json:"retries"`
-
-	// Endpoints contains provider-specific endpoints
-	Endpoints map[string]string `json:"endpoints,omitempty"`
-
-	// Credentials contains provider-specific credentials
-	Credentials map[string]string `json:"credentials,omitempty"`
-
-	// CustomConfig contains provider-specific configuration
-	CustomConfig map[string]interface{} `json:"custom_config,omitempty"`
 }
 
 // EventHandler handles termination events
@@ -161,12 +149,6 @@ type CloudProviderRegistry interface {
 	// GetProvider returns a provider by name
 	GetProvider(name string) (CloudProvider, error)
 
-	// GetSupportedProviders returns all providers that are supported in the current environment
-	GetSupportedProviders(ctx context.Context) ([]CloudProvider, error)
-
 	// DetectCurrentProvider returns the first supported cloud provider (for single-node DaemonSet deployment)
 	DetectCurrentProvider(ctx context.Context) (CloudProvider, error)
-
-	// ListProviders returns all registered providers
-	ListProviders() []string
 }

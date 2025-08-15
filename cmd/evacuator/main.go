@@ -132,8 +132,6 @@ func setupLogger(cfg config.LoggingConfig) *slog.Logger {
 func registerProviders(registry *cloud.Registry, cfg *config.Config, logger *slog.Logger) error {
 	// Create provider configuration using monitoring settings
 	providerConfig := &cloud.ProviderConfig{
-		Name:         "alibaba",
-		Enabled:      true,
 		PollInterval: cfg.Monitoring.PollInterval,
 		Timeout:      cfg.Monitoring.ProviderTimeout,
 		Retries:      cfg.Monitoring.ProviderRetries,

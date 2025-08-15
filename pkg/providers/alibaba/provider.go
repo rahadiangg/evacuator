@@ -11,6 +11,8 @@ import (
 	"github.com/rahadiangg/evacuator/pkg/cloud"
 )
 
+const ProviderName = "alibaba"
+
 // Provider implements the CloudProvider interface for Alibaba Cloud
 type Provider struct {
 	config     *cloud.ProviderConfig
@@ -49,13 +51,13 @@ const (
 func NewProvider(config *cloud.ProviderConfig) *Provider {
 	if config == nil {
 		config = &cloud.ProviderConfig{
-			Name:         "alibaba",
-			Enabled:      true,
 			PollInterval: 5 * time.Second,
 			Timeout:      5 * time.Second,
 			Retries:      3,
 		}
 	}
+
+	config.Name = ProviderName
 
 	return &Provider{
 		config: config,
@@ -67,7 +69,7 @@ func NewProvider(config *cloud.ProviderConfig) *Provider {
 
 // Name returns the provider name
 func (p *Provider) Name() string {
-	return "alibaba"
+	return ProviderName
 }
 
 // IsSupported checks if we're running on Alibaba Cloud by trying to access the metadata service
@@ -157,7 +159,7 @@ func (p *Provider) GetNodeInfo(ctx context.Context) (*cloud.NodeInfo, error) {
 	return &cloud.NodeInfo{
 		NodeID:         string(instanceID),
 		NodeName:       string(instanceID), // Use instance ID as fallback when NODE_NAME not set
-		CloudProvider:  "alibaba",
+		CloudProvider:  ProviderName,
 		Region:         string(region),
 		Zone:           string(zone),
 		InstanceType:   string(instanceType),

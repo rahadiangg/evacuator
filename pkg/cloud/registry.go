@@ -54,21 +54,6 @@ func (r *Registry) GetProvider(name string) (CloudProvider, error) {
 	return provider, nil
 }
 
-// GetSupportedProviders returns all providers that are supported in the current environment
-func (r *Registry) GetSupportedProviders(ctx context.Context) ([]CloudProvider, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	var supported []CloudProvider
-	for _, provider := range r.providers {
-		if provider.IsSupported(ctx) {
-			supported = append(supported, provider)
-		}
-	}
-
-	return supported, nil
-}
-
 // DetectCurrentProvider returns the first supported cloud provider in the current environment
 // This is more appropriate for DaemonSet deployment where each pod handles one node
 func (r *Registry) DetectCurrentProvider(ctx context.Context) (CloudProvider, error) {
@@ -82,17 +67,4 @@ func (r *Registry) DetectCurrentProvider(ctx context.Context) (CloudProvider, er
 	}
 
 	return nil, fmt.Errorf("no supported cloud provider detected")
-}
-
-// ListProviders returns all registered provider names
-func (r *Registry) ListProviders() []string {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
-
-	names := make([]string, 0, len(r.providers))
-	for name := range r.providers {
-		names = append(names, name)
-	}
-
-	return names
 }
