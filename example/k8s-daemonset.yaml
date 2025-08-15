@@ -94,7 +94,7 @@ data:
         timeout: "10s"              # HTTP request timeout for Telegram API
         send_raw: false             # Send raw event data in addition to formatted message
 
-    logging:
+    log:
       level: "info"        # debug, info, warn, error
       format: "json"       # json, text  
       output: "stdout"     # stdout, stderr, or file path

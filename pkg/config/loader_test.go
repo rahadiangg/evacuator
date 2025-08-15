@@ -40,8 +40,8 @@ func TestLoadConfig_Defaults(t *testing.T) {
 		t.Errorf("Expected Handlers.Kubernetes.InCluster to be true, got %v", cfg.Handlers.Kubernetes.InCluster)
 	}
 
-	if cfg.Logging.Level != "info" {
-		t.Errorf("Expected log level to be info, got %v", cfg.Logging.Level)
+	if cfg.Log.Level != "info" {
+		t.Errorf("Expected log level to be info, got %v", cfg.Log.Level)
 	}
 }
 
@@ -54,7 +54,7 @@ func TestLoadConfig_EnvironmentVariables(t *testing.T) {
 	os.Setenv("NODE_NAME", "test-node-123")
 	os.Setenv("MONITORING_PROVIDER", "alibaba")
 	os.Setenv("MONITORING_POLL_INTERVAL", "10s")
-	os.Setenv("LOGGING_LEVEL", "debug")
+	os.Setenv("LOG_LEVEL", "debug")
 	os.Setenv("HANDLERS_TELEGRAM_BOT_TOKEN", "bot123456:ABC-DEF")
 	os.Setenv("HANDLERS_TELEGRAM_CHAT_ID", "-100123456789")
 
@@ -82,8 +82,8 @@ func TestLoadConfig_EnvironmentVariables(t *testing.T) {
 		t.Errorf("Expected PollInterval to be 10s, got %v", cfg.Monitoring.PollInterval)
 	}
 
-	if cfg.Logging.Level != "debug" {
-		t.Errorf("Expected log level to be debug, got %v", cfg.Logging.Level)
+	if cfg.Log.Level != "debug" {
+		t.Errorf("Expected log level to be debug, got %v", cfg.Log.Level)
 	}
 
 	if cfg.Handlers.Telegram.BotToken != "bot123456:ABC-DEF" {
@@ -123,9 +123,9 @@ func clearEnvironmentVariables() {
 		"KUBERNETES_KUBECONFIG",
 		"KUBERNETES_IN_CLUSTER",
 		"KUBERNETES_NODE_NAME",
-		"LOGGING_LEVEL",
-		"LOGGING_FORMAT",
-		"LOGGING_OUTPUT",
+		"LOG_LEVEL",
+		"LOG_FORMAT",
+		"LOG_OUTPUT",
 		"CONFIG_FILE",
 		// Legacy variable names (for cleanup)
 		"APP_DRY_RUN",
@@ -144,9 +144,6 @@ func clearEnvironmentVariables() {
 		"TELEGRAM_TIMEOUT",
 		"TELEGRAM_SEND_RAW",
 		"KUBECONFIG",
-		"LOG_LEVEL",
-		"LOG_FORMAT",
-		"LOG_OUTPUT",
 	}
 
 	for _, envVar := range envVars {

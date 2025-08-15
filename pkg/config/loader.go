@@ -72,9 +72,9 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("handlers.telegram.send_raw", false)
 
 	// Logging defaults
-	v.SetDefault("logging.level", "info")
-	v.SetDefault("logging.format", "json")
-	v.SetDefault("logging.output", "stdout")
+	v.SetDefault("log.level", "info")
+	v.SetDefault("log.format", "json")
+	v.SetDefault("log.output", "stdout")
 }
 
 // setupEnvironmentVariables configures Viper to read from environment variables
@@ -108,9 +108,9 @@ func setupEnvironmentVariables(v *viper.Viper) {
 		"HANDLERS_TELEGRAM_CHAT_ID":                 "handlers.telegram.chat_id",
 		"HANDLERS_TELEGRAM_TIMEOUT":                 "handlers.telegram.timeout",
 		"HANDLERS_TELEGRAM_SEND_RAW":                "handlers.telegram.send_raw",
-		"LOGGING_LEVEL":                             "logging.level",
-		"LOGGING_FORMAT":                            "logging.format",
-		"LOGGING_OUTPUT":                            "logging.output",
+		"LOG_LEVEL":                                 "log.level",
+		"LOG_FORMAT":                                "log.format",
+		"LOG_OUTPUT":                                "log.output",
 	}
 
 	// Bind environment variables (direct mapping only)

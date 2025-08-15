@@ -24,7 +24,7 @@ type Config struct {
 	Handlers HandlersConfig `yaml:"handlers" json:"handlers" mapstructure:"handlers"`
 
 	// Logging settings
-	Logging LoggingConfig `yaml:"logging" json:"logging" mapstructure:"logging"`
+	Log LoggingConfig `yaml:"log" json:"log" mapstructure:"log"`
 }
 
 // AppConfig contains general application settings
@@ -168,7 +168,7 @@ func DefaultConfig() *Config {
 				SendRaw: false, // Don't send raw data by default
 			},
 		},
-		Logging: LoggingConfig{
+		Log: LoggingConfig{
 			Level:  "info",
 			Format: "json",
 			Output: "stdout",
@@ -251,8 +251,8 @@ func (c *Config) Validate() error {
 		"error": true,
 	}
 
-	if !validLevels[c.Logging.Level] {
-		return fmt.Errorf("invalid log level: %s", c.Logging.Level)
+	if !validLevels[c.Log.Level] {
+		return fmt.Errorf("invalid log level: %s", c.Log.Level)
 	}
 
 	validFormats := map[string]bool{
@@ -260,8 +260,8 @@ func (c *Config) Validate() error {
 		"text": true,
 	}
 
-	if !validFormats[c.Logging.Format] {
-		return fmt.Errorf("invalid log format: %s", c.Logging.Format)
+	if !validFormats[c.Log.Format] {
+		return fmt.Errorf("invalid log format: %s", c.Log.Format)
 	}
 
 	return nil

@@ -72,7 +72,7 @@ handlers:
 # - Fallback: Uses cloud provider instance ID if no environment variable is set
 # - This is the core node that the evacuator monitors for termination events
 
-logging:
+log:
   level: "info"        # debug, info, warn, error
   format: "json"       # json, text  
   output: "stdout"     # stdout, stderr, or file path
@@ -119,9 +119,9 @@ logging:
 # HANDLERS_TELEGRAM_SEND_RAW="false"     # handlers.telegram.send_raw - Send raw event data
 #
 # ===== LOGGING SETTINGS =====
-# LOGGING_LEVEL="info"                   # logging.level - Log level (debug/info/warn/error)
-# LOGGING_FORMAT="json"                  # logging.format - Log format (json/text)
-# LOGGING_OUTPUT="stdout"                # logging.output - Log output destination
+# LOG_LEVEL="info"                   # log.level - Log level (debug/info/warn/error)
+# LOG_FORMAT="json"                  # log.format - Log format (json/text)
+# LOG_OUTPUT="stdout"                # log.output - Log output destination
 #
 # ===== CONFIGURATION FILE OVERRIDE =====
 # CONFIG_FILE=""                         # Path to custom configuration file
@@ -131,7 +131,7 @@ logging:
 # ===============================================================================
 #
 # Basic usage:
-#   DRY_RUN=true LOGGING_LEVEL=debug ./evacuator
+#   DRY_RUN=true LOG_LEVEL=debug ./evacuator
 #   MONITORING_PROVIDER=alibaba HANDLERS_TELEGRAM_ENABLED=true ./evacuator
 #
 # With custom config file:
@@ -143,8 +143,8 @@ logging:
 #   HANDLERS_TELEGRAM_ENABLED=true \
 #   HANDLERS_TELEGRAM_BOT_TOKEN="bot123456:ABC-DEF" \
 #   HANDLERS_TELEGRAM_CHAT_ID="-100123456789" \
-#   LOGGING_LEVEL=info \
-#   LOGGING_FORMAT=json \
+#   LOG_LEVEL=info \
+#   LOG_FORMAT=json \
 #   ./evacuator
 #
 # ===============================================================================
@@ -156,9 +156,9 @@ logging:
 # env:
 #   - name: DRY_RUN
 #     value: "false"
-#   - name: LOGGING_LEVEL  
+#   - name: LOG_LEVEL  
 #     value: "info"
-#   - name: LOGGING_FORMAT
+#   - name: LOG_FORMAT
 #     value: "json"
 #   - name: NODE_NAME
 #     valueFrom:

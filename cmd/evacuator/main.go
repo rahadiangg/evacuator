@@ -23,7 +23,7 @@ func main() {
 	}
 
 	// Setup logger
-	logger := setupLogger(cfg.Logging)
+	logger := setupLogger(cfg.Log)
 
 	logger.Info("Starting evacuator",
 		"dry_run", cfg.DryRun,
