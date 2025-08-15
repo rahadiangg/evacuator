@@ -133,49 +133,6 @@ type LoggingConfig struct {
 	Output string `yaml:"output" json:"output" mapstructure:"output"`
 }
 
-// DefaultConfig returns a default configuration
-func DefaultConfig() *Config {
-	return &Config{
-		DryRun:   false,
-		NodeName: "", // Auto-detected from environment or cloud provider
-		App:      AppConfig{},
-		Monitoring: MonitoringConfig{
-			Provider:        "", // Empty means auto-detect
-			AutoDetect:      true,
-			EventBufferSize: 100,
-			PollInterval:    5 * time.Second,
-			ProviderTimeout: 3 * time.Second,
-			ProviderRetries: 3,
-		},
-		Handlers: HandlersConfig{
-			Log: LogHandlerConfig{
-				Enabled: true,
-			},
-			Kubernetes: KubernetesHandlerConfig{
-				Enabled:             true,
-				DrainTimeoutSeconds: 90,               // 1.5 minutes - suitable for 2-minute spot termination
-				ForceEvictionAfter:  90 * time.Second, // Force evict after 1.5 minutes
-				SkipDaemonSets:      true,
-				DeleteEmptyDirData:  false,
-				IgnorePodDisruption: true, // Ignore PDBs during emergency evacuation
-				GracePeriodSeconds:  10,   // Shorter grace period for faster evacuation
-				KubeConfig:          "",   // Empty for default locations
-				InCluster:           true, // Use in-cluster configuration by default
-			},
-			Telegram: TelegramHandlerConfig{
-				Enabled: false, // Disabled by default, requires manual configuration
-				Timeout: 10 * time.Second,
-				SendRaw: false, // Don't send raw data by default
-			},
-		},
-		Log: LoggingConfig{
-			Level:  "info",
-			Format: "json",
-			Output: "stdout",
-		},
-	}
-}
-
 // Validate validates the configuration
 func (c *Config) Validate() error {
 	// Validate monitoring config
