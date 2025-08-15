@@ -63,12 +63,15 @@ data:
   config.yaml: |
     app:
       dry_run: false
+      node_name: ""    # Auto-detected from NODE_NAME env var or cloud provider
 
     monitoring:
-      provider: ""           # Leave empty for auto-detection, or specify: alibaba
-      auto_detect: true      # Enable auto-detection when provider is empty
-      event_buffer_size: 100
-      poll_interval: "5s"    # How often to check for spot termination events
+      provider: ""              # Manually specify cloud provider: alibaba (ALWAYS takes priority)
+      auto_detect: true         # Auto-detect when provider is empty (ignored when provider is set)
+      event_buffer_size: 100    # Buffer size for termination event channels
+      poll_interval: "5s"       # How often to check for spot termination events (3s-30s, default: 5s)
+      provider_timeout: "3s"    # Timeout for cloud provider API calls (default: 3s)
+      provider_retries: 3       # Number of retries for failed cloud provider requests (default: 3)
 
     handlers:
       log:
@@ -76,24 +79,26 @@ data:
       
       kubernetes:
         enabled: true
-        drain_timeout_seconds: 300
-        force_eviction_after: "5m"
+        drain_timeout_seconds: 90      # 1.5 minutes - suitable for 2-minute spot termination notice
+        force_eviction_after: "90s"    # Force evict pods after 1.5 minutes
         skip_daemon_sets: true
-        delete_empty_dir_data: true
-        ignore_pod_disruption: false
-        grace_period_seconds: 30
+        delete_empty_dir_data: false
+        ignore_pod_disruption: true    # Ignore PDBs during emergency evacuation
+        grace_period_seconds: 10       # Shorter grace period for faster evacuation
+        kubeconfig: ""                 # Path to kubeconfig file (empty for default locations)
+        in_cluster: true               # Use in-cluster configuration when running as DaemonSet
       
-      # telegram:
-      #   enabled: false      # Enable via environment variables for security
-      #   timeout: "10s"
-
-    kubernetes:
-      in_cluster: true
+      telegram:
+        enabled: false               # Disabled by default, requires manual configuration
+        bot_token: ""               # Telegram bot token (get from @BotFather)
+        chat_id: ""                 # Chat ID where to send notifications
+        timeout: "10s"              # HTTP request timeout for Telegram API
+        send_raw: false             # Send raw event data in addition to formatted message
 
     logging:
-      level: "info"
-      format: "json"
-      output: "stdout"
+      level: "info"        # debug, info, warn, error
+      format: "json"       # json, text  
+      output: "stdout"     # stdout, stderr, or file path
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -116,7 +121,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: evacuator
-        image: evacuator:latest
+        image: rahadiangg/evacuator:latest
         imagePullPolicy: Always
         env:
         # Pass the node name to the pod so it knows which node it's monitoring
@@ -126,30 +131,13 @@ spec:
               fieldPath: spec.nodeName
         - name: CONFIG_FILE
           value: "/etc/evacuator/config.yaml"
-        
-        # Optional: Enable Telegram notifications
-        # Uncomment these lines and create the secret above to enable Telegram
-        # - name: HANDLERS_TELEGRAM_ENABLED
-        #   value: "true"
-        # - name: HANDLERS_TELEGRAM_BOT_TOKEN
-        #   valueFrom:
-        #     secretKeyRef:
-        #       name: evacuator-telegram
-        #       key: bot-token
-        # - name: HANDLERS_TELEGRAM_CHAT_ID
-        #   valueFrom:
-        #     secretKeyRef:
-        #       name: evacuator-telegram
-        #       key: chat-id
-        # - name: HANDLERS_TELEGRAM_SEND_RAW
-        #   value: "false"  # Set to "true" to send raw event data
         resources:
           requests:
             cpu: 100m
             memory: 128Mi
           limits:
-            cpu: 200m
-            memory: 256Mi
+            cpu: 100m
+            memory: 128Mi
         volumeMounts:
         - name: config
           mountPath: /etc/evacuator
