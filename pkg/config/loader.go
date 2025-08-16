@@ -57,7 +57,7 @@ func setDefaults(v *viper.Viper) {
 
 	// Handler defaults
 	v.SetDefault("handlers.log.enabled", true)
-	v.SetDefault("handlers.kubernetes.enabled", true)
+	v.SetDefault("handlers.kubernetes.enabled", false)
 	v.SetDefault("handlers.kubernetes.drain_timeout_seconds", 90)
 	v.SetDefault("handlers.kubernetes.force_eviction_after", 90*time.Second)
 	v.SetDefault("handlers.kubernetes.skip_daemon_sets", true)
