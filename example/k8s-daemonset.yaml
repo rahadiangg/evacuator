@@ -70,7 +70,6 @@ data:
       event_buffer_size: 100    # Buffer size for termination event channels
       poll_interval: "5s"       # How often to check for spot termination events (3s-30s, default: 5s)
       provider_timeout: "3s"    # Timeout for cloud provider API calls (default: 3s)
-      provider_retries: 3       # Number of retries for failed cloud provider requests (default: 3)
 
     handlers:
       log:

@@ -127,9 +127,6 @@ type ProviderConfig struct {
 
 	// Timeout is the timeout for API calls
 	Timeout time.Duration `yaml:"timeout" json:"timeout"`
-
-	// Retries is the number of retries for failed requests
-	Retries int `yaml:"retries" json:"retries"`
 }
 
 // EventHandler handles termination events

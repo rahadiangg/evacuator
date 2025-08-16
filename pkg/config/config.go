@@ -42,9 +42,6 @@ type MonitoringConfig struct {
 
 	// ProviderTimeout is the timeout for cloud provider API calls
 	ProviderTimeout time.Duration `yaml:"provider_timeout" json:"provider_timeout" mapstructure:"provider_timeout"`
-
-	// ProviderRetries is the number of retries for failed cloud provider requests
-	ProviderRetries int `yaml:"provider_retries" json:"provider_retries" mapstructure:"provider_retries"`
 }
 
 // HandlersConfig contains event handler configurations
@@ -143,10 +140,6 @@ func (c *Config) Validate() error {
 
 	if c.Monitoring.ProviderTimeout <= 0 {
 		return fmt.Errorf("provider timeout must be positive")
-	}
-
-	if c.Monitoring.ProviderRetries < 0 {
-		return fmt.Errorf("provider retries cannot be negative")
 	}
 
 	// Validate manual provider selection

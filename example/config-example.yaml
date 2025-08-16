@@ -22,7 +22,6 @@ monitoring:
   event_buffer_size: 100    # Buffer size for termination event channels
   poll_interval: "5s"       # How often to check for spot termination events (3s-30s, default: 5s)
   provider_timeout: "3s"    # Timeout for cloud provider API calls (default: 3s)
-  provider_retries: 3       # Number of retries for failed cloud provider requests (default: 3)
 
 # Note: The application automatically detects Alibaba Cloud by checking its metadata service
 # Provider configurations use built-in defaults - remove providers section to use defaults
@@ -93,7 +92,6 @@ log:
 # MONITORING_AUTO_DETECT="true"          # monitoring.auto_detect - Auto-detect cloud provider
 # MONITORING_POLL_INTERVAL="5s"          # monitoring.poll_interval - Check interval (3s-30s)
 # MONITORING_PROVIDER_TIMEOUT="3s"       # monitoring.provider_timeout - API call timeout
-# MONITORING_PROVIDER_RETRIES="3"        # monitoring.provider_retries - Number of retry attempts
 # MONITORING_EVENT_BUFFER_SIZE="100"     # monitoring.event_buffer_size - Event buffer size
 #
 # ===== HANDLER SETTINGS =====

@@ -54,7 +54,6 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("monitoring.event_buffer_size", 100)
 	v.SetDefault("monitoring.poll_interval", 5*time.Second)
 	v.SetDefault("monitoring.provider_timeout", 3*time.Second)
-	v.SetDefault("monitoring.provider_retries", 3)
 
 	// Handler defaults
 	v.SetDefault("handlers.log.enabled", true)
@@ -91,7 +90,6 @@ func setupEnvironmentVariables(v *viper.Viper) {
 		"MONITORING_EVENT_BUFFER_SIZE":              "monitoring.event_buffer_size",
 		"MONITORING_POLL_INTERVAL":                  "monitoring.poll_interval",
 		"MONITORING_PROVIDER_TIMEOUT":               "monitoring.provider_timeout",
-		"MONITORING_PROVIDER_RETRIES":               "monitoring.provider_retries",
 		"HANDLERS_LOG_ENABLED":                      "handlers.log.enabled",
 		"HANDLERS_KUBERNETES_ENABLED":               "handlers.kubernetes.enabled",
 		"HANDLERS_KUBERNETES_DRAIN_TIMEOUT_SECONDS": "handlers.kubernetes.drain_timeout_seconds",
