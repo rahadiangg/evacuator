@@ -2,7 +2,6 @@ package alibaba
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -42,21 +41,10 @@ const (
 	// Network endpoints
 	PrivateIPEndpoint = MetadataServiceBase + "/meta-data/private-ipv4"
 	PublicIPEndpoint  = MetadataServiceBase + "/meta-data/eipv4"
-
-	// Maintenance endpoints
-	MaintenanceEndpoint = MetadataServiceBase + "/maintenance/active-system-events"
 )
 
 // NewProvider creates a new Alibaba Cloud provider
 func NewProvider(config *cloud.ProviderConfig) *Provider {
-	if config == nil {
-		config = &cloud.ProviderConfig{
-			PollInterval: 5 * time.Second,
-			Timeout:      5 * time.Second,
-			Retries:      3,
-		}
-	}
-
 	config.Name = ProviderAlibaba
 
 	return &Provider{
@@ -231,11 +219,6 @@ func (p *Provider) checkForTermination(ctx context.Context) *cloud.TerminationEv
 		return event
 	}
 
-	// Check for maintenance events
-	if event := p.checkMaintenanceEvents(ctx, token); event != nil {
-		return event
-	}
-
 	return nil
 }
 
@@ -280,52 +263,6 @@ func (p *Provider) checkSpotTermination(ctx context.Context, token string) *clou
 			"termination_time": terminationTimeStr,
 		},
 	}
-}
-
-// checkMaintenanceEvents checks for scheduled maintenance events
-func (p *Provider) checkMaintenanceEvents(ctx context.Context, token string) *cloud.TerminationEvent {
-	resp, err := p.makeMetadataRequest(ctx, MaintenanceEndpoint, token)
-	if err != nil {
-		return nil // No maintenance events
-	}
-
-	// Parse maintenance events
-	var events []map[string]interface{}
-	if err := json.Unmarshal(resp, &events); err != nil {
-		return nil
-	}
-
-	// Look for relevant maintenance events
-	for _, event := range events {
-		if eventType, ok := event["EventType"].(string); ok {
-			if eventType == "SystemMaintenance.Reboot" || eventType == "SystemMaintenance.Redeploy" {
-				nodeInfo, _ := p.GetNodeInfo(ctx)
-
-				var notBefore time.Time
-				if nb, ok := event["NotBefore"].(string); ok {
-					notBefore, _ = time.Parse(time.RFC3339, nb)
-				}
-
-				return &cloud.TerminationEvent{
-					NodeID:          nodeInfo.NodeID,
-					NodeName:        nodeInfo.NodeName,
-					Reason:          cloud.MaintenanceEvent,
-					TerminationTime: notBefore,
-					NoticeTime:      time.Now(),
-					GracePeriod:     time.Until(notBefore),
-					CloudProvider:   ProviderAlibaba,
-					Region:          nodeInfo.Region,
-					Zone:            nodeInfo.Zone,
-					InstanceType:    nodeInfo.InstanceType,
-					Metadata: map[string]interface{}{
-						"maintenance_event": event,
-					},
-				}
-			}
-		}
-	}
-
-	return nil
 }
 
 // getMetadataToken gets an access token for Alibaba Cloud metadata service

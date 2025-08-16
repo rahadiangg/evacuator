@@ -130,6 +130,7 @@ func setupLogger(cfg config.LoggingConfig) *slog.Logger {
 
 // registerProviders registers all cloud providers
 func registerProviders(registry *cloud.Registry, cfg *config.Config, logger *slog.Logger) error {
+
 	// Create provider configuration using monitoring settings
 	providerConfig := &cloud.ProviderConfig{
 		PollInterval: cfg.Monitoring.PollInterval,
