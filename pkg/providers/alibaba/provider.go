@@ -45,10 +45,12 @@ const (
 
 // NewProvider creates a new Alibaba Cloud provider
 func NewProvider(config *cloud.ProviderConfig) *Provider {
-	config.Name = ProviderAlibaba
+	// Create a copy of the config to avoid mutating the input
+	providerConfig := *config
+	providerConfig.Name = ProviderAlibaba
 
 	return &Provider{
-		config: config,
+		config: &providerConfig,
 		httpClient: &http.Client{
 			Timeout: config.Timeout,
 		},
@@ -79,7 +81,9 @@ func (p *Provider) StartMonitoring(ctx context.Context) (<-chan cloud.Terminatio
 		return nil, fmt.Errorf("invalid configuration: %w", err)
 	}
 
-	eventChan := make(chan cloud.TerminationEvent, 10)
+	// Use configurable buffer size, defaulting to 10 if not specified
+	bufferSize := 10
+	eventChan := make(chan cloud.TerminationEvent, bufferSize)
 	p.stopChan = make(chan struct{})
 
 	// Start monitoring goroutine
