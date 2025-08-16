@@ -82,7 +82,10 @@ func (p *Provider) StartMonitoring(ctx context.Context) (<-chan cloud.Terminatio
 	}
 
 	// Use configurable buffer size, defaulting to 10 if not specified
-	bufferSize := 10
+	bufferSize := p.config.EventBufferSize
+	if bufferSize <= 0 {
+		bufferSize = 10
+	}
 	eventChan := make(chan cloud.TerminationEvent, bufferSize)
 	p.stopChan = make(chan struct{})
 
@@ -179,6 +182,10 @@ func (p *Provider) ValidateConfiguration() error {
 
 	if p.config.Timeout < time.Second {
 		return fmt.Errorf("timeout must be at least 1 second")
+	}
+
+	if p.config.EventBufferSize < 0 {
+		return fmt.Errorf("event buffer size cannot be negative")
 	}
 
 	return nil

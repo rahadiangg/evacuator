@@ -127,6 +127,9 @@ type ProviderConfig struct {
 
 	// Timeout is the timeout for API calls
 	Timeout time.Duration `yaml:"timeout" json:"timeout"`
+
+	// EventBufferSize is the buffer size for event channels
+	EventBufferSize int `yaml:"event_buffer_size" json:"event_buffer_size"`
 }
 
 // EventHandler handles termination events

@@ -133,8 +133,9 @@ func registerProviders(registry *cloud.Registry, cfg *config.Config, logger *slo
 
 	// Create provider configuration using monitoring settings
 	providerConfig := &cloud.ProviderConfig{
-		PollInterval: cfg.Monitoring.PollInterval,
-		Timeout:      cfg.Monitoring.ProviderTimeout,
+		PollInterval:    cfg.Monitoring.PollInterval,
+		Timeout:         cfg.Monitoring.ProviderTimeout,
+		EventBufferSize: cfg.Monitoring.EventBufferSize,
 	}
 
 	// Register Alibaba Cloud provider
