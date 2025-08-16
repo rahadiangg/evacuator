@@ -10,6 +10,16 @@ import (
 	"github.com/rahadiangg/evacuator/pkg/cloud"
 )
 
+// HTTPError represents an HTTP error with status code
+type HTTPError struct {
+	StatusCode int
+	Message    string
+}
+
+func (e *HTTPError) Error() string {
+	return fmt.Sprintf("HTTP %d: %s", e.StatusCode, e.Message)
+}
+
 const ProviderAlibaba = "alibaba"
 
 // Provider implements the CloudProvider interface for Alibaba Cloud
@@ -35,6 +45,9 @@ const (
 	ZoneEndpoint             = MetadataServiceBase + "/meta-data/zone-id"
 
 	// Spot instance endpoints
+	// According to Alibaba Cloud documentation:
+	// - instance/spot/termination-time: Returns 404 if instance is available,
+	//   or UTC timestamp (e.g., 2015-01-05T18:02:00Z) if instance is due to be reclaimed
 	SpotTerminationEndpoint = MetadataServiceBase + "/meta-data/instance/spot/termination-time"
 	SpotActionEndpoint      = MetadataServiceBase + "/meta-data/instance/spot/action"
 
@@ -235,10 +248,16 @@ func (p *Provider) checkForTermination(ctx context.Context) *cloud.TerminationEv
 
 // checkSpotTermination checks for spot instance termination notice
 func (p *Provider) checkSpotTermination(ctx context.Context, token string) *cloud.TerminationEvent {
-	// Check termination time
+	// Check termination time following official Alibaba Cloud documentation:
+	// - If 404 is returned, the instance is available
+	// - If a UTC timestamp is returned, the instance is due to be reclaimed at that time
 	terminationTimeResp, err := p.makeMetadataRequest(ctx, SpotTerminationEndpoint, token)
 	if err != nil {
-		return nil // No termination notice
+		// Check if it's a 404 error (instance is available)
+		if httpErr, ok := err.(*HTTPError); ok && httpErr.StatusCode == http.StatusNotFound {
+			return nil // Instance is available, no termination notice
+		}
+		return nil // Other errors, assume no termination notice
 	}
 
 	terminationTimeStr := string(terminationTimeResp)
@@ -246,7 +265,7 @@ func (p *Provider) checkSpotTermination(ctx context.Context, token string) *clou
 		return nil
 	}
 
-	// Parse termination time (Alibaba Cloud format: 2024-08-14T10:30:00Z)
+	// Parse termination time (Alibaba Cloud format: 2015-01-05T18:02:00Z)
 	terminationTime, err := time.Parse(time.RFC3339, terminationTimeStr)
 	if err != nil {
 		return nil
@@ -277,6 +296,8 @@ func (p *Provider) checkSpotTermination(ctx context.Context, token string) *clou
 }
 
 // getMetadataToken gets an access token for Alibaba Cloud metadata service
+// Following the official documentation example:
+// TOKEN=`curl -X PUT "http://100.100.100.200/latest/api/token" -H "X-aliyun-ecs-metadata-token-ttl-seconds:<Validity period>"`
 func (p *Provider) getMetadataToken(ctx context.Context) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, "PUT", TokenEndpoint, nil)
 	if err != nil {
@@ -305,13 +326,15 @@ func (p *Provider) getMetadataToken(ctx context.Context) (string, error) {
 }
 
 // makeMetadataRequest makes a request to the Alibaba Cloud metadata service with token authentication
+// Following the official documentation pattern:
+// curl -H "X-aliyun-ecs-metadata-token: $TOKEN" http://100.100.100.200/latest/meta-data/instance/spot/termination-time
 func (p *Provider) makeMetadataRequest(ctx context.Context, endpoint, token string) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	// Add the authentication token header
+	// Add the authentication token header as shown in official documentation
 	req.Header.Set("X-aliyun-ecs-metadata-token", token)
 
 	resp, err := p.httpClient.Do(req)
@@ -321,7 +344,10 @@ func (p *Provider) makeMetadataRequest(ctx context.Context, endpoint, token stri
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("request failed: status %d", resp.StatusCode)
+		return nil, &HTTPError{
+			StatusCode: resp.StatusCode,
+			Message:    fmt.Sprintf("metadata request failed for %s", endpoint),
+		}
 	}
 
 	return io.ReadAll(resp.Body)
@@ -329,7 +355,17 @@ func (p *Provider) makeMetadataRequest(ctx context.Context, endpoint, token stri
 
 // isSpotInstance checks if this is a spot instance
 func (p *Provider) isSpotInstance(ctx context.Context, token string) bool {
-	// Try to access spot-specific endpoints to determine if it's a spot instance
+	// According to Alibaba Cloud documentation:
+	// Try to access spot termination endpoint - if it returns 404, it's available (but is a spot instance)
+	// If it returns other errors or success, it's also a spot instance
+	// If the endpoint doesn't exist at all, it's likely not a spot instance
 	_, err := p.makeMetadataRequest(ctx, SpotTerminationEndpoint, token)
-	return err == nil
+	if err != nil {
+		// Check if it's a 404 error (instance is available spot instance)
+		if httpErr, ok := err.(*HTTPError); ok && httpErr.StatusCode == http.StatusNotFound {
+			return true // This is a spot instance that's currently available
+		}
+		return false // Other errors likely mean it's not a spot instance
+	}
+	return true // Successfully accessed spot endpoint, definitely a spot instance
 }
