@@ -11,7 +11,7 @@ import (
 	"github.com/rahadiangg/evacuator/pkg/cloud"
 )
 
-const ProviderName = "alibaba"
+const ProviderAlibaba = "alibaba"
 
 // Provider implements the CloudProvider interface for Alibaba Cloud
 type Provider struct {
@@ -57,7 +57,7 @@ func NewProvider(config *cloud.ProviderConfig) *Provider {
 		}
 	}
 
-	config.Name = ProviderName
+	config.Name = ProviderAlibaba
 
 	return &Provider{
 		config: config,
@@ -69,7 +69,7 @@ func NewProvider(config *cloud.ProviderConfig) *Provider {
 
 // Name returns the provider name
 func (p *Provider) Name() string {
-	return ProviderName
+	return ProviderAlibaba
 }
 
 // IsSupported checks if we're running on Alibaba Cloud by trying to access the metadata service
@@ -159,7 +159,7 @@ func (p *Provider) GetNodeInfo(ctx context.Context) (*cloud.NodeInfo, error) {
 	return &cloud.NodeInfo{
 		NodeID:         string(instanceID),
 		NodeName:       string(instanceID), // Use instance ID as fallback when NODE_NAME not set
-		CloudProvider:  ProviderName,
+		CloudProvider:  ProviderAlibaba,
 		Region:         string(region),
 		Zone:           string(zone),
 		InstanceType:   string(instanceType),
@@ -271,7 +271,7 @@ func (p *Provider) checkSpotTermination(ctx context.Context, token string) *clou
 		TerminationTime: terminationTime,
 		NoticeTime:      time.Now(),
 		GracePeriod:     time.Until(terminationTime),
-		CloudProvider:   "alibaba",
+		CloudProvider:   ProviderAlibaba,
 		Region:          nodeInfo.Region,
 		Zone:            nodeInfo.Zone,
 		InstanceType:    nodeInfo.InstanceType,
@@ -313,7 +313,7 @@ func (p *Provider) checkMaintenanceEvents(ctx context.Context, token string) *cl
 					TerminationTime: notBefore,
 					NoticeTime:      time.Now(),
 					GracePeriod:     time.Until(notBefore),
-					CloudProvider:   "alibaba",
+					CloudProvider:   ProviderAlibaba,
 					Region:          nodeInfo.Region,
 					Zone:            nodeInfo.Zone,
 					InstanceType:    nodeInfo.InstanceType,

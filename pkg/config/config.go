@@ -14,9 +14,6 @@ type Config struct {
 	// Auto-detected from NODE_NAME environment variable if empty
 	NodeName string `yaml:"node_name" json:"node_name" mapstructure:"node_name"`
 
-	// Application settings
-	App AppConfig `yaml:"app" json:"app" mapstructure:"app"`
-
 	// Monitoring settings
 	Monitoring MonitoringConfig `yaml:"monitoring" json:"monitoring" mapstructure:"monitoring"`
 
@@ -25,11 +22,6 @@ type Config struct {
 
 	// Logging settings
 	Log LoggingConfig `yaml:"log" json:"log" mapstructure:"log"`
-}
-
-// AppConfig contains general application settings
-type AppConfig struct {
-	// Currently unused - kept for future application-specific settings
 }
 
 // MonitoringConfig contains monitoring settings
