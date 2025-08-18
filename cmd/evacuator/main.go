@@ -28,8 +28,15 @@ const (
 	// Dummy provider detection wait time for testing
 	DummyProviderDetectionWait = 3 * time.Second
 
+	// Handler processing timeout - time allowed for each handler to process termination event
+	// Set to 75 seconds to ensure completion within AWS 2-minute spot termination window
+	// This allows 33 seconds safety buffer before AWS force-terminates the instance
+	HandlerProcessingTimeout = 75 * time.Second
+
 	// Graceful shutdown timeout - maximum time to wait for goroutines to finish
-	GracefulShutdownTimeout = 5 * time.Second
+	// Reduced to 10 seconds since handlers should already be complete
+	// This is just for final cleanup before AWS termination deadline
+	GracefulShutdownTimeout = 10 * time.Second
 )
 
 func main() {
@@ -144,7 +151,8 @@ func broadcastTerminationEvents(ctx context.Context, terminationEvent <-chan eva
 					defer handlerWg.Done()
 
 					// Create context with timeout for handler processing
-					handlerCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+					// Uses HandlerProcessingTimeout constant for consistency
+					handlerCtx, cancel := context.WithTimeout(ctx, HandlerProcessingTimeout)
 					defer cancel()
 
 					logger.Debug("processing termination event with handler", "handler_name", h.Name())
