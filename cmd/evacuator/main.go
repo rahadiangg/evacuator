@@ -12,8 +12,6 @@ import (
 	"github.com/rahadiangg/evacuator"
 )
 
-var providers []evacuator.Provider
-
 func main() {
 
 	// Create default HTTP client
@@ -25,7 +23,7 @@ func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
 	// register providers
-	providers = []evacuator.Provider{
+	providers := []evacuator.Provider{
 		evacuator.NewAwsProvider(httpClient, logger),
 		evacuator.NewDummyProvider(httpClient, logger, 3*time.Second),
 	}
@@ -36,7 +34,7 @@ func main() {
 	}
 
 	// Detect the current provider
-	provider := DetectProvider()
+	provider := DetectProvider(providers, logger)
 	if provider == nil {
 		logger.Error("no supported provider detected")
 		os.Exit(1)
@@ -68,13 +66,13 @@ func main() {
 }
 
 // DetectProvider automatically detects which cloud provider is currently running
-func DetectProvider() evacuator.Provider {
+func DetectProvider(providers []evacuator.Provider, logger *slog.Logger) evacuator.Provider {
 	for _, p := range providers {
 		if p.IsSupported() {
 			return p
 		}
 	}
 
-	// TODO: logger in here
+	logger.Debug("no supported provider detected")
 	return nil // No provider detected
 }
