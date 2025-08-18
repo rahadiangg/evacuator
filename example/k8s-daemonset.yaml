@@ -76,7 +76,7 @@ data:
         enabled: true
       
       kubernetes:
-        enabled: true
+        enabled: false
         drain_timeout_seconds: 90      # 1.5 minutes - suitable for 2-minute spot termination notice
         force_eviction_after: "90s"    # Force evict pods after 1.5 minutes
         skip_daemon_sets: true
@@ -87,11 +87,11 @@ data:
         in_cluster: true               # Use in-cluster configuration when running as DaemonSet
       
       telegram:
-        enabled: false               # Disabled by default, requires manual configuration
-        bot_token: ""               # Telegram bot token (get from @BotFather)
-        chat_id: ""                 # Chat ID where to send notifications
-        timeout: "10s"              # HTTP request timeout for Telegram API
-        send_raw: false             # Send raw event data in addition to formatted message
+        enabled: true               # Disabled by default, requires manual configuration
+        bot_token: "8296936609:AAHI3rNDPtyqvho-S0onOfkYydFPruFCJDU"               # Telegram bot token (get from @BotFather)
+        chat_id: "381459937"                 # Chat ID where to send notifications
+        timeout: "2s"              # HTTP request timeout for Telegram API
+        send_raw: true             # Send raw event data in addition to formatted message
 
     log:
       level: "info"        # debug, info, warn, error
