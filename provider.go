@@ -16,6 +16,7 @@ type Provider interface {
 type ProviderName string
 
 const (
+	ProviderDummy    ProviderName = "dummy"
 	ProviderAWS      ProviderName = "aws"
 	ProviderAlicloud ProviderName = "alicloud"
 	ProviderGcp      ProviderName = "gcp"

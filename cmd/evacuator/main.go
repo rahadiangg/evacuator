@@ -27,6 +27,7 @@ func main() {
 	// register providers
 	providers = []evacuator.Provider{
 		evacuator.NewAwsProvider(httpClient, logger),
+		evacuator.NewDummyProvider(httpClient, logger, 3*time.Second),
 	}
 
 	// register handlers
