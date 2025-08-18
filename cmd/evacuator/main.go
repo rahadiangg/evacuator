@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -44,9 +45,12 @@ func main() {
 	defer rootCancel()
 
 	terminationEvent := make(chan evacuator.TerminationEvent)
+	var wg sync.WaitGroup
 
 	// Start monitoring in a goroutine
+	wg.Add(1)
 	go func() {
+		defer wg.Done()
 		provider.StartMonitoring(rootCtx, terminationEvent)
 	}()
 
@@ -54,15 +58,37 @@ func main() {
 	shutdownSignal := make(chan os.Signal, 1)
 	signal.Notify(shutdownSignal, syscall.SIGINT, syscall.SIGTERM)
 
-	go func(handlers []evacuator.Handler) {
-		for _, h := range handlers {
-			h.HandleTermination(terminationEvent)
-		}
-	}(handlers)
+	// Start handlers in separate goroutines
+	for _, h := range handlers {
+		wg.Add(1)
+		go func(handler evacuator.Handler) {
+			defer wg.Done()
+			handler.HandleTermination(terminationEvent)
+		}(h)
+	}
 
-	// TODO: fix the graceful shutdown
+	// Wait for shutdown signal
 	<-shutdownSignal
-	logger.Info("shutting down gracefully")
+	logger.Info("shutdown signal received, stopping gracefully...")
+
+	// Cancel context to stop all goroutines
+	rootCancel()
+
+	// Wait for all goroutines to finish with timeout
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		logger.Info("all goroutines stopped successfully")
+	case <-time.After(5 * time.Second):
+		logger.Warn("timeout waiting for goroutines to stop")
+	}
+
+	logger.Info("shutdown complete")
 }
 
 // DetectProvider automatically detects which cloud provider is currently running
