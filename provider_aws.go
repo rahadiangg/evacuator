@@ -59,13 +59,13 @@ func (p *AwsProvider) IsSupported() bool {
 	return true
 }
 
-func (p *AwsProvider) StartMonitoring(ctx context.Context) {
+func (p *AwsProvider) StartMonitoring(ctx context.Context, e chan<- TerminationEvent) {
 
-	go p.startMonitoring(ctx)
+	go p.startMonitoring(ctx, e)
 	p.logger.Info("aws provider monitoring started")
 }
 
-func (p *AwsProvider) startMonitoring(ctx context.Context) {
+func (p *AwsProvider) startMonitoring(ctx context.Context, e chan<- TerminationEvent) {
 
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
@@ -94,8 +94,10 @@ func (p *AwsProvider) startMonitoring(ctx context.Context) {
 				// to prevent further ticker executions
 				go func() {
 					defer p.mu.Unlock()
-					// TODO: handle something that can take several seconds
-					p.logger.Info("termination handling completed")
+					p.logger.Info("monitoring will be stopped and continue to handler")
+
+					t := p.getInstanceMetadatas()
+					e <- t
 				}()
 
 				// Stop the ticker and exit the monitoring loop
@@ -128,6 +130,15 @@ func (p *AwsProvider) isSpotTerminationDetected() (error, bool) {
 	}
 
 	return nil, true
+}
+
+func (p *AwsProvider) getInstanceMetadatas() TerminationEvent {
+	var t TerminationEvent
+	t.Hostname, _ = p.doMetadataRequest(AwsMetaDataHostnameUrl)
+	t.PrivateIP, _ = p.doMetadataRequest(AwsMetaDataLocalIpUrl)
+	t.InstanceID, _ = p.doMetadataRequest(AwsMetaDataInstanceIdUrl)
+
+	return t
 }
 
 func (p *AwsProvider) getMetadataToken() (string, error) {

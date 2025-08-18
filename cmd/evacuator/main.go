@@ -29,6 +29,11 @@ func main() {
 		evacuator.NewAwsProvider(httpClient, logger),
 	}
 
+	// register handlers
+	handlers := []evacuator.Handler{
+		evacuator.NewTelegramHandler(),
+	}
+
 	// Detect the current provider
 	provider := DetectProvider()
 	if provider == nil {
@@ -39,14 +44,22 @@ func main() {
 	rootCtx, rootCancel := context.WithCancel(context.Background())
 	defer rootCancel()
 
+	terminationEvent := make(chan evacuator.TerminationEvent)
+
 	// Start monitoring in a goroutine
 	go func() {
-		provider.StartMonitoring(rootCtx)
+		provider.StartMonitoring(rootCtx, terminationEvent)
 	}()
 
 	// Setup graceful shutdown
 	shutdownSignal := make(chan os.Signal, 1)
 	signal.Notify(shutdownSignal, syscall.SIGINT, syscall.SIGTERM)
+
+	go func(handlers []evacuator.Handler) {
+		for _, h := range handlers {
+			h.HandleTermination(terminationEvent)
+		}
+	}(handlers)
 
 	// TODO: fix the graceful shutdown
 	<-shutdownSignal

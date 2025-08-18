@@ -15,5 +15,5 @@ const (
 )
 
 type Handler interface {
-	HandleTermination()
+	HandleTermination(e <-chan TerminationEvent)
 }

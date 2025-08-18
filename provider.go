@@ -10,7 +10,7 @@ type Provider interface {
 	IsSupported() bool
 
 	// StartMonitoring
-	StartMonitoring(ctx context.Context)
+	StartMonitoring(ctx context.Context, e chan<- TerminationEvent)
 }
 
 type ProviderName string
