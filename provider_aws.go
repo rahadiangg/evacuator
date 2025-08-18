@@ -29,6 +29,10 @@ const (
 	AwsMetaDataHostnameUrl   = AwsMetaDataBaseUrl + "/meta-data/hostname"
 	AwsMetaDataInstanceIdUrl = AwsMetaDataBaseUrl + "/meta-data/instance-id"
 	AwsMetaDataLocalIpUrl    = AwsMetaDataBaseUrl + "/meta-data/local-ipv4"
+
+	// AWS metadata service timeout constants
+	AwsMetadataRequestTimeout = 2 * time.Second
+	AwsMonitoringInterval     = 2 * time.Second
 )
 
 type AwsResponseSpot struct {
@@ -48,8 +52,10 @@ func (p *AwsProvider) Name() ProviderName {
 }
 
 func (p *AwsProvider) IsSupported() bool {
+	ctx, cancel := context.WithTimeout(context.Background(), AwsMetadataRequestTimeout)
+	defer cancel()
 
-	_, err := p.doMetadataRequest(AwsMetaDataHostnameUrl)
+	_, err := p.doMetadataRequest(ctx, AwsMetaDataHostnameUrl)
 	if err != nil {
 		p.logger.Debug("fail to detect aws provider", "error", err.Error())
 		return false
@@ -66,8 +72,7 @@ func (p *AwsProvider) StartMonitoring(ctx context.Context, e chan<- TerminationE
 }
 
 func (p *AwsProvider) startMonitoring(ctx context.Context, e chan<- TerminationEvent) {
-
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(AwsMonitoringInterval)
 	defer ticker.Stop()
 
 	for {
@@ -113,8 +118,11 @@ func (p *AwsProvider) startMonitoring(ctx context.Context, e chan<- TerminationE
 }
 
 func (p *AwsProvider) isSpotTerminationDetected() (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), AwsMetadataRequestTimeout)
+	defer cancel()
+
 	// Get spot instance action metadata
-	spotInfo, err := p.doMetadataRequest(AwsMetaDataSpotUrl)
+	spotInfo, err := p.doMetadataRequest(ctx, AwsMetaDataSpotUrl)
 	if err != nil {
 		return false, err
 	}
@@ -135,8 +143,12 @@ func (p *AwsProvider) isSpotTerminationDetected() (bool, error) {
 func (p *AwsProvider) getInstanceMetadatas() TerminationEvent {
 	var t TerminationEvent
 
+	// Create context with timeout for metadata requests
+	ctx, cancel := context.WithTimeout(context.Background(), AwsMetadataRequestTimeout)
+	defer cancel()
+
 	// Get hostname - log error but continue
-	if hostname, err := p.doMetadataRequest(AwsMetaDataHostnameUrl); err != nil {
+	if hostname, err := p.doMetadataRequest(ctx, AwsMetaDataHostnameUrl); err != nil {
 		p.logger.Error("failed to get hostname", "error", err.Error())
 		t.Hostname = "unknown"
 	} else {
@@ -144,7 +156,7 @@ func (p *AwsProvider) getInstanceMetadatas() TerminationEvent {
 	}
 
 	// Get private IP - log error but continue
-	if privateIP, err := p.doMetadataRequest(AwsMetaDataLocalIpUrl); err != nil {
+	if privateIP, err := p.doMetadataRequest(ctx, AwsMetaDataLocalIpUrl); err != nil {
 		p.logger.Error("failed to get private IP", "error", err.Error())
 		t.PrivateIP = "unknown"
 	} else {
@@ -152,7 +164,7 @@ func (p *AwsProvider) getInstanceMetadatas() TerminationEvent {
 	}
 
 	// Get instance ID - log error but continue
-	if instanceID, err := p.doMetadataRequest(AwsMetaDataInstanceIdUrl); err != nil {
+	if instanceID, err := p.doMetadataRequest(ctx, AwsMetaDataInstanceIdUrl); err != nil {
 		p.logger.Error("failed to get instance ID", "error", err.Error())
 		t.InstanceID = "unknown"
 	} else {
@@ -164,10 +176,9 @@ func (p *AwsProvider) getInstanceMetadatas() TerminationEvent {
 	return t
 }
 
-func (p *AwsProvider) getMetadataToken() (string, error) {
-
+func (p *AwsProvider) getMetadataToken(ctx context.Context) (string, error) {
 	// Get token for authentication next request
-	req, err := http.NewRequest("PUT", AwsMetaDataTokenUrl, nil)
+	req, err := http.NewRequestWithContext(ctx, "PUT", AwsMetaDataTokenUrl, nil)
 	if err != nil {
 		return "", err
 	}
@@ -193,14 +204,13 @@ func (p *AwsProvider) getMetadataToken() (string, error) {
 	return token, nil
 }
 
-func (p *AwsProvider) doMetadataRequest(url string) (string, error) {
-
-	token, err := p.getMetadataToken()
+func (p *AwsProvider) doMetadataRequest(ctx context.Context, url string) (string, error) {
+	token, err := p.getMetadataToken(ctx)
 	if err != nil {
 		return "", err
 	}
 
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return "", err
 	}

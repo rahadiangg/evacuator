@@ -13,10 +13,22 @@ import (
 	"github.com/rahadiangg/evacuator"
 )
 
+// Application configuration constants
+const (
+	// HTTP client timeout for external requests
+	HTTPClientTimeout = 10 * time.Second
+
+	// Dummy provider detection wait time for testing
+	DummyProviderDetectionWait = 3 * time.Second
+
+	// Graceful shutdown timeout - maximum time to wait for goroutines to finish
+	GracefulShutdownTimeout = 5 * time.Second
+)
+
 func main() {
 	// Create default HTTP client with reasonable timeout
 	httpClient := &http.Client{
-		Timeout: 10 * time.Second,
+		Timeout: HTTPClientTimeout,
 	}
 
 	// Create default logger with text output to stdout
@@ -25,7 +37,7 @@ func main() {
 	// Register all available providers
 	providers := []evacuator.Provider{
 		evacuator.NewAwsProvider(httpClient, logger),
-		evacuator.NewDummyProvider(httpClient, logger, 3*time.Second),
+		evacuator.NewDummyProvider(httpClient, logger, DummyProviderDetectionWait),
 	}
 
 	// Register all configured handlers
@@ -80,11 +92,11 @@ func main() {
 		close(done)
 	}()
 
-	// Either all goroutines finish or timeout after 5 seconds
+	// Either all goroutines finish or timeout after configured duration
 	select {
 	case <-done:
 		logger.Info("all goroutines stopped successfully")
-	case <-time.After(5 * time.Second):
+	case <-time.After(GracefulShutdownTimeout):
 		logger.Warn("timeout waiting for goroutines to stop")
 	}
 
