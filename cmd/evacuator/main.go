@@ -107,8 +107,10 @@ func main() {
 // It iterates through all registered providers and returns the first one that
 // reports it is supported in the current environment.
 func DetectProvider(providers []evacuator.Provider, logger *slog.Logger) evacuator.Provider {
+
 	for _, p := range providers {
 		if p.IsSupported() {
+			logger.Info("provider detected", "provider_name", p.Name())
 			return p
 		}
 	}

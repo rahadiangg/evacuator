@@ -7,16 +7,15 @@ import (
 	"time"
 )
 
-// DummyProvider is an implementation of the Provider interface for AWS.
+// DummyProvider is an implementation of the Provider interface for testing.
 type DummyProvider struct {
-	httpClient    *http.Client
 	logger        *slog.Logger
 	DetectionWait time.Duration
 }
 
 func NewDummyProvider(client *http.Client, logger *slog.Logger, detectionWait time.Duration) *DummyProvider {
+	// Note: client parameter is accepted for interface consistency but not used in dummy implementation
 	return &DummyProvider{
-		httpClient:    client,
 		logger:        logger,
 		DetectionWait: detectionWait,
 	}
