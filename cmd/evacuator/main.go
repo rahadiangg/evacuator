@@ -58,14 +58,12 @@ func main() {
 	shutdownSignal := make(chan os.Signal, 1)
 	signal.Notify(shutdownSignal, syscall.SIGINT, syscall.SIGTERM)
 
-	// Start handlers in separate goroutines
-	for _, h := range handlers {
-		wg.Add(1)
-		go func(handler evacuator.Handler) {
-			defer wg.Done()
-			handler.HandleTermination(terminationEvent)
-		}(h)
-	}
+	// Start event broadcaster to distribute termination events to all handlers
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		broadcastTerminationEvents(rootCtx, terminationEvent, handlers, logger)
+	}()
 
 	// Wait for shutdown signal
 	<-shutdownSignal
@@ -101,4 +99,39 @@ func DetectProvider(providers []evacuator.Provider, logger *slog.Logger) evacuat
 
 	logger.Debug("no supported provider detected")
 	return nil // No provider detected
+}
+
+// broadcastTerminationEvents distributes termination events to all handlers
+func broadcastTerminationEvents(ctx context.Context, terminationEvent <-chan evacuator.TerminationEvent, handlers []evacuator.Handler, logger *slog.Logger) {
+	for {
+		select {
+		case event := <-terminationEvent:
+			logger.Info("termination event received, broadcasting to all handlers")
+
+			// Create individual channels for each handler to prevent race conditions
+			var handlerWg sync.WaitGroup
+			for i, handler := range handlers {
+				handlerWg.Add(1)
+				go func(h evacuator.Handler, handlerIndex int) {
+					defer handlerWg.Done()
+
+					// Create a dedicated channel for this handler
+					handlerChan := make(chan evacuator.TerminationEvent, 1)
+					handlerChan <- event
+					close(handlerChan)
+
+					logger.Debug("sending termination event to handler", "handler_index", handlerIndex)
+					h.HandleTermination(handlerChan)
+				}(handler, i)
+			}
+
+			// Wait for all handlers to process the event
+			handlerWg.Wait()
+			logger.Info("all handlers completed processing termination event")
+
+		case <-ctx.Done():
+			logger.Debug("termination event broadcaster stopping")
+			return
+		}
+	}
 }
