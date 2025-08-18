@@ -37,6 +37,10 @@ const (
 	// Reduced to 10 seconds since handlers should already be complete
 	// This is just for final cleanup before AWS termination deadline
 	GracefulShutdownTimeout = 10 * time.Second
+
+	// Telegram things
+	TelegramBotToken = "xxxx"
+	TelegramChatID   = "xxxxx"
 )
 
 func main() {
@@ -55,9 +59,16 @@ func main() {
 	}
 
 	// Register all configured handlers
-	handlers := []evacuator.Handler{
-		evacuator.NewTelegramHandler(logger),
+	var handlers []evacuator.Handler
+
+	// Add Telegram handler if configured
+	telegramHandler, err := evacuator.NewTelegramHandler(logger, TelegramBotToken, TelegramChatID)
+	if err != nil {
+		logger.Error("failed to create telegram handler", "error", err)
+		os.Exit(1)
 	}
+	handlers = append(handlers, telegramHandler)
+	logger.Info("telegram handler registered")
 
 	// Detect the current cloud provider environment
 	provider := DetectProvider(providers, logger)
