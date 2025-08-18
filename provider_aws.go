@@ -80,7 +80,7 @@ func (p *AwsProvider) startMonitoring(ctx context.Context, e chan<- TerminationE
 			}
 
 			// Check for spot termination
-			err, terminationDetected := p.isSpotTerminationDetected()
+			terminationDetected, err := p.isSpotTerminationDetected()
 			if err != nil {
 				p.logger.Error("failed to detect spot termination", "error", err.Error())
 				p.mu.Unlock()
@@ -112,31 +112,54 @@ func (p *AwsProvider) startMonitoring(ctx context.Context, e chan<- TerminationE
 	}
 }
 
-func (p *AwsProvider) isSpotTerminationDetected() (error, bool) {
+func (p *AwsProvider) isSpotTerminationDetected() (bool, error) {
 	// Get spot instance action metadata
 	spotInfo, err := p.doMetadataRequest(AwsMetaDataSpotUrl)
 	if err != nil {
-		return err, false
+		return false, err
 	}
 
 	var r AwsResponseSpot
 
 	if err := json.Unmarshal([]byte(spotInfo), &r); err != nil {
-		return fmt.Errorf("failed to unmarshal spot instance action: %w", err), false
+		return false, fmt.Errorf("failed to unmarshal spot instance action: %w", err)
 	}
 
 	if r.Action != "stop" && r.Action != "terminate" {
-		return fmt.Errorf("unexpected spot instance action: %s", r.Action), false
+		return false, fmt.Errorf("unexpected spot instance action: %s", r.Action)
 	}
 
-	return nil, true
+	return true, nil
 }
 
 func (p *AwsProvider) getInstanceMetadatas() TerminationEvent {
 	var t TerminationEvent
-	t.Hostname, _ = p.doMetadataRequest(AwsMetaDataHostnameUrl)
-	t.PrivateIP, _ = p.doMetadataRequest(AwsMetaDataLocalIpUrl)
-	t.InstanceID, _ = p.doMetadataRequest(AwsMetaDataInstanceIdUrl)
+
+	// Get hostname - log error but continue
+	if hostname, err := p.doMetadataRequest(AwsMetaDataHostnameUrl); err != nil {
+		p.logger.Error("failed to get hostname", "error", err.Error())
+		t.Hostname = "unknown"
+	} else {
+		t.Hostname = hostname
+	}
+
+	// Get private IP - log error but continue
+	if privateIP, err := p.doMetadataRequest(AwsMetaDataLocalIpUrl); err != nil {
+		p.logger.Error("failed to get private IP", "error", err.Error())
+		t.PrivateIP = "unknown"
+	} else {
+		t.PrivateIP = privateIP
+	}
+
+	// Get instance ID - log error but continue
+	if instanceID, err := p.doMetadataRequest(AwsMetaDataInstanceIdUrl); err != nil {
+		p.logger.Error("failed to get instance ID", "error", err.Error())
+		t.InstanceID = "unknown"
+	} else {
+		t.InstanceID = instanceID
+	}
+
+	t.Reason = TerminationReasonSpot
 
 	return t
 }
