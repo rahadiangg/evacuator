@@ -37,10 +37,6 @@ const (
 	// Reduced to 10 seconds since handlers should already be complete
 	// This is just for final cleanup before AWS termination deadline
 	GracefulShutdownTimeout = 10 * time.Second
-
-	// Telegram things
-	TelegramBotToken = "xxxx"
-	TelegramChatID   = "xxxxx"
 )
 
 func main() {
@@ -50,7 +46,10 @@ func main() {
 	}
 
 	// Create default logger with text output to stdout
-	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logopt := slog.HandlerOptions{
+		Level: slog.LevelDebug,
+	}
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &logopt))
 
 	// Register all available providers
 	providers := []evacuator.Provider{
@@ -62,7 +61,7 @@ func main() {
 	var handlers []evacuator.Handler
 
 	// Add Telegram handler if configured
-	telegramHandler, err := evacuator.NewTelegramHandler(logger, TelegramBotToken, TelegramChatID)
+	telegramHandler, err := evacuator.NewTelegramHandler(logger, os.Getenv("TELEGRAM_BOT_TOKEN"), os.Getenv("TELEGRAM_CHAT_ID"))
 	if err != nil {
 		logger.Error("failed to create telegram handler", "error", err)
 		os.Exit(1)
