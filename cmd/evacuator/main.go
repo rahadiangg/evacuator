@@ -14,71 +14,73 @@ import (
 )
 
 func main() {
-
-	// Create default HTTP client
+	// Create default HTTP client with reasonable timeout
 	httpClient := &http.Client{
 		Timeout: 10 * time.Second,
 	}
 
-	// Create default logger
+	// Create default logger with text output to stdout
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
 
-	// register providers
+	// Register all available providers
 	providers := []evacuator.Provider{
 		evacuator.NewAwsProvider(httpClient, logger),
 		evacuator.NewDummyProvider(httpClient, logger, 3*time.Second),
 	}
 
-	// register handlers
+	// Register all configured handlers
 	handlers := []evacuator.Handler{
 		evacuator.NewTelegramHandler(logger),
 	}
 
-	// Detect the current provider
+	// Detect the current cloud provider environment
 	provider := DetectProvider(providers, logger)
 	if provider == nil {
 		logger.Error("no supported provider detected")
 		os.Exit(1)
 	}
 
+	// Create root context for coordinated shutdown
 	rootCtx, rootCancel := context.WithCancel(context.Background())
 	defer rootCancel()
 
+	// Create channel for termination events from provider
 	terminationEvent := make(chan evacuator.TerminationEvent)
 	var wg sync.WaitGroup
 
-	// Start monitoring in a goroutine
+	// Start provider monitoring in background goroutine
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		provider.StartMonitoring(rootCtx, terminationEvent)
 	}()
 
-	// Setup graceful shutdown
+	// Setup signal handling for graceful shutdown
 	shutdownSignal := make(chan os.Signal, 1)
 	signal.Notify(shutdownSignal, syscall.SIGINT, syscall.SIGTERM)
 
-	// Start event broadcaster to distribute termination events to all handlers
+	// Start event broadcaster to distribute events to all handlers
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		broadcastTerminationEvents(rootCtx, terminationEvent, handlers, logger)
 	}()
 
-	// Wait for shutdown signal
+	// Wait for shutdown signal (SIGINT or SIGTERM)
 	<-shutdownSignal
 	logger.Info("shutdown signal received, stopping gracefully...")
 
-	// Cancel context to stop all goroutines
+	// Cancel context to signal all goroutines to stop
 	rootCancel()
 
-	// Wait for all goroutines to finish with timeout
+	// Wait for all goroutines to finish with timeout protection
 	done := make(chan struct{})
 	go func() {
 		wg.Wait()
 		close(done)
 	}()
 
+	// Either all goroutines finish or timeout after 5 seconds
 	select {
 	case <-done:
 		logger.Info("all goroutines stopped successfully")
@@ -89,7 +91,9 @@ func main() {
 	logger.Info("shutdown complete")
 }
 
-// DetectProvider automatically detects which cloud provider is currently running
+// DetectProvider automatically detects which cloud provider is currently running.
+// It iterates through all registered providers and returns the first one that
+// reports it is supported in the current environment.
 func DetectProvider(providers []evacuator.Provider, logger *slog.Logger) evacuator.Provider {
 	for _, p := range providers {
 		if p.IsSupported() {
@@ -98,10 +102,13 @@ func DetectProvider(providers []evacuator.Provider, logger *slog.Logger) evacuat
 	}
 
 	logger.Debug("no supported provider detected")
-	return nil // No provider detected
+	return nil
 }
 
-// broadcastTerminationEvents distributes termination events to all handlers
+// broadcastTerminationEvents distributes termination events to all handlers.
+// This function ensures that every registered handler receives every termination
+// event by creating individual channels for each handler, preventing race conditions
+// and ensuring no handler misses an event.
 func broadcastTerminationEvents(ctx context.Context, terminationEvent <-chan evacuator.TerminationEvent, handlers []evacuator.Handler, logger *slog.Logger) {
 	for {
 		select {
@@ -125,7 +132,7 @@ func broadcastTerminationEvents(ctx context.Context, terminationEvent <-chan eva
 				}(handler, i)
 			}
 
-			// Wait for all handlers to process the event
+			// Wait for all handlers to process the event before continuing
 			handlerWg.Wait()
 			logger.Info("all handlers completed processing termination event")
 
