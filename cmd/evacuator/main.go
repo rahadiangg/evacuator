@@ -13,6 +13,13 @@ import (
 	"github.com/rahadiangg/evacuator"
 )
 
+// HandlerResult represents the result of processing a termination event by a handler
+type HandlerResult struct {
+	HandlerName string
+	Error       error
+	ProcessedAt time.Time
+}
+
 // Application configuration constants
 const (
 	// HTTP client timeout for external requests
@@ -120,35 +127,63 @@ func DetectProvider(providers []evacuator.Provider, logger *slog.Logger) evacuat
 }
 
 // broadcastTerminationEvents distributes termination events to all handlers.
-// This function ensures that every registered handler receives every termination
-// event by creating individual channels for each handler, preventing race conditions
-// and ensuring no handler misses an event.
+// This function processes each event through all handlers sequentially and collects results.
 func broadcastTerminationEvents(ctx context.Context, terminationEvent <-chan evacuator.TerminationEvent, handlers []evacuator.Handler, logger *slog.Logger) {
 	for {
 		select {
 		case event := <-terminationEvent:
-			logger.Info("termination event received, broadcasting to all handlers")
+			logger.Info("termination event received, processing through all handlers")
 
-			// Create individual channels for each handler to prevent race conditions
+			// Process event through all handlers and collect results
 			var handlerWg sync.WaitGroup
-			for i, handler := range handlers {
+			results := make(chan HandlerResult, len(handlers))
+
+			for _, handler := range handlers {
 				handlerWg.Add(1)
-				go func(h evacuator.Handler, handlerIndex int) {
+				go func(h evacuator.Handler) {
 					defer handlerWg.Done()
 
-					// Create a dedicated channel for this handler
-					handlerChan := make(chan evacuator.TerminationEvent, 1)
-					handlerChan <- event
-					close(handlerChan)
+					// Create context with timeout for handler processing
+					handlerCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+					defer cancel()
 
-					logger.Debug("sending termination event to handler", "handler_index", handlerIndex)
-					h.HandleTermination(handlerChan)
-				}(handler, i)
+					logger.Debug("processing termination event with handler", "handler_name", h.Name())
+
+					err := h.HandleTermination(handlerCtx, event)
+					results <- HandlerResult{
+						HandlerName: h.Name(),
+						Error:       err,
+						ProcessedAt: time.Now(),
+					}
+				}(handler)
 			}
 
-			// Wait for all handlers to process the event before continuing
-			handlerWg.Wait()
-			logger.Info("all handlers completed processing termination event")
+			// Wait for all handlers to complete and collect results
+			go func() {
+				handlerWg.Wait()
+				close(results)
+			}()
+
+			// Process results
+			successCount := 0
+			for result := range results {
+				if result.Error != nil {
+					logger.Error("handler failed to process termination event",
+						"handler_name", result.HandlerName,
+						"error", result.Error.Error(),
+						"processed_at", result.ProcessedAt)
+				} else {
+					logger.Info("handler successfully processed termination event",
+						"handler_name", result.HandlerName,
+						"processed_at", result.ProcessedAt)
+					successCount++
+				}
+			}
+
+			logger.Info("termination event processing completed",
+				"total_handlers", len(handlers),
+				"successful_handlers", successCount,
+				"failed_handlers", len(handlers)-successCount)
 
 		case <-ctx.Done():
 			logger.Debug("termination event broadcaster stopping")

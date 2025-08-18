@@ -1,5 +1,7 @@
 package evacuator
 
+import "context"
+
 type TerminationEvent struct {
 	Hostname   string
 	PrivateIP  string
@@ -15,5 +17,9 @@ const (
 )
 
 type Handler interface {
-	HandleTermination(e <-chan TerminationEvent)
+	// Process a single termination event and return any error
+	HandleTermination(ctx context.Context, event TerminationEvent) error
+
+	// Get handler name for logging and identification
+	Name() string
 }

@@ -1,6 +1,7 @@
 package evacuator
 
 import (
+	"context"
 	"errors"
 	"log/slog"
 )
@@ -15,20 +16,28 @@ func NewTelegramHandler(logger *slog.Logger) *TelegramHandler {
 	}
 }
 
-func (h *TelegramHandler) HandleTermination(e <-chan TerminationEvent) {
-	// Receive the single termination event
-	event := <-e
+func (h *TelegramHandler) Name() string {
+	return "telegram"
+}
 
-	// Validate termination event
+func (h *TelegramHandler) HandleTermination(ctx context.Context, event TerminationEvent) error {
+	// Validate termination event first
 	if err := h.validateTerminationEvent(event); err != nil {
 		h.logger.Error("invalid termination event received", "error", err.Error())
-		return
+		return err
 	}
 
 	h.logger.Info("telegram handler processing termination event",
 		"hostname", event.Hostname,
 		"instance_id", event.InstanceID,
+		"private_ip", event.PrivateIP,
 		"reason", event.Reason)
+
+	// TODO: Implement actual Telegram notification logic here
+	// For now, just log the successful processing
+	h.logger.Info("termination event processed successfully via telegram")
+
+	return nil
 }
 
 // validateTerminationEvent validates that a termination event has required fields.
