@@ -6,8 +6,10 @@ type HandlerTelegram struct {
 	logger *slog.Logger
 }
 
-func NewTelegramHandler() *HandlerTelegram {
-	return &HandlerTelegram{}
+func NewTelegramHandler(logger *slog.Logger) *HandlerTelegram {
+	return &HandlerTelegram{
+		logger: logger,
+	}
 }
 
 func (h *HandlerTelegram) HandleTermination(e <-chan TerminationEvent) {

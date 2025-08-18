@@ -32,7 +32,7 @@ func main() {
 
 	// register handlers
 	handlers := []evacuator.Handler{
-		evacuator.NewTelegramHandler(),
+		evacuator.NewTelegramHandler(logger),
 	}
 
 	// Detect the current provider
