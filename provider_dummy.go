@@ -3,7 +3,6 @@ package evacuator
 import (
 	"context"
 	"log/slog"
-	"net/http"
 	"time"
 )
 
@@ -13,7 +12,7 @@ type DummyProvider struct {
 	DetectionWait time.Duration
 }
 
-func NewDummyProvider(client *http.Client, logger *slog.Logger, detectionWait time.Duration) *DummyProvider {
+func NewDummyProvider(logger *slog.Logger, detectionWait time.Duration) *DummyProvider {
 	// Note: client parameter is accepted for interface consistency but not used in dummy implementation
 	return &DummyProvider{
 		logger:        logger,

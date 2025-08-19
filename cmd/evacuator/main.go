@@ -54,7 +54,7 @@ func main() {
 	// Register all available providers
 	providers := []evacuator.Provider{
 		evacuator.NewAwsProvider(httpClient, logger),
-		evacuator.NewDummyProvider(httpClient, logger, DummyProviderDetectionWait),
+		evacuator.NewDummyProvider(logger, DummyProviderDetectionWait),
 	}
 
 	// Register all configured handlers
