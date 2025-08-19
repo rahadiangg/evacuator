@@ -54,6 +54,7 @@ func main() {
 	// Register all available providers
 	providers := []evacuator.Provider{
 		evacuator.NewAwsProvider(httpClient, logger),
+		evacuator.NewAlicloudProvider(httpClient, logger),
 		evacuator.NewDummyProvider(logger, DummyProviderDetectionWait),
 	}
 
