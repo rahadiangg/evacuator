@@ -59,28 +59,12 @@ func main() {
 	}
 
 	// Register all configured handlers
-	var handlers []evacuator.Handler
-
-	// Add Kubernetes handler if configured
-	kubernetesHandler, err := evacuator.NewKubernetesHandler(&evacuator.KubernetesHandlerConfig{
-		InCluster:            true, // Set to false and provide CustomKubeConfigPath if running outside cluster
-		CustomKubeConfigPath: "",   // Set path if InCluster is false
-	}, logger)
+	handlerRegistry := evacuator.NewHandlerRegistry(logger)
+	handlers, err := handlerRegistry.RegisterHandlers()
 	if err != nil {
-		logger.Error("failed to create kubernetes handler", "error", err)
+		logger.Error("failed to register handlers", "error", err)
 		os.Exit(1)
 	}
-	handlers = append(handlers, kubernetesHandler)
-	logger.Info("kubernetes handler registered")
-
-	// Add Telegram handler if configured
-	telegramHandler, err := evacuator.NewTelegramHandler(logger, os.Getenv("TELEGRAM_BOT_TOKEN"), os.Getenv("TELEGRAM_CHAT_ID"))
-	if err != nil {
-		logger.Error("failed to create telegram handler", "error", err)
-		os.Exit(1)
-	}
-	handlers = append(handlers, telegramHandler)
-	logger.Info("telegram handler registered")
 
 	// Detect the current cloud provider environment
 	provider := DetectProvider(providers, logger)
