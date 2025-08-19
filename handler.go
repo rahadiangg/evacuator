@@ -48,6 +48,11 @@ func (r *HandlerRegistry) RegisterHandlers() ([]Handler, error) {
 	// Get global configuration
 	handlerConfig := GetHandlerConfig()
 
+	// log handler always registered
+	logHandler := NewLogHandler(r.logger)
+	handlers = append(handlers, logHandler)
+	r.logger.Info("log handler registered successfully")
+
 	// Register Kubernetes handler if enabled
 	if handlerConfig.Kubernetes.Enabled {
 		kubernetesHandler, err := r.createKubernetesHandler()

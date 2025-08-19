@@ -267,9 +267,9 @@ func broadcastTerminationEvents(ctx context.Context, terminationEvent <-chan eva
 func setupLogger() *slog.Logger {
 	var logLeveler slog.Level
 
-	config := evacuator.GetGlobalConfig()
+	config := evacuator.GetLogConfig()
 
-	switch config.Log.Level {
+	switch config.Level {
 	case "debug":
 		logLeveler = slog.LevelDebug
 	case "info":
@@ -288,7 +288,7 @@ func setupLogger() *slog.Logger {
 	}
 
 	var logger *slog.Logger
-	switch config.Log.Format {
+	switch config.Format {
 	case "text":
 		logger = slog.New(slog.NewTextHandler(os.Stdout, &logOpts))
 	case "json":
