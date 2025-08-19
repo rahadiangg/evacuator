@@ -85,8 +85,8 @@ func main() {
 	// Register all available providers
 	providers := []evacuator.Provider{
 		evacuator.NewAwsProvider(providerHttpClient, logger),
-		// evacuator.NewAlicloudProvider(providerHttpClient, logger),
-		// evacuator.NewDummyProvider(logger, DummyProviderDetectionWait),
+		evacuator.NewAlicloudProvider(providerHttpClient, logger),
+		evacuator.NewDummyProvider(logger, DummyProviderDetectionWait),
 	}
 
 	// Register all configured handlers

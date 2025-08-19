@@ -30,8 +30,7 @@ const (
 	AlicloudMetaDataLocalIpUrl    = AlicloudMetaDataBaseUrl + "/meta-data/private-ipv4"
 
 	// Alicloud metadata service timeout constants
-	AlicloudMetadataRequestTimeout = 2 * time.Second
-	AlicloudMonitoringInterval     = 2 * time.Second
+	AlicloudMonitoringInterval = 2 * time.Second
 )
 
 func NewAlicloudProvider(client *http.Client, logger *slog.Logger) *AlicloudProvider {
@@ -45,9 +44,7 @@ func (p *AlicloudProvider) Name() ProviderName {
 	return ProviderAlicloud
 }
 
-func (p *AlicloudProvider) IsSupported() bool {
-	ctx, cancel := context.WithTimeout(context.Background(), AlicloudMetadataRequestTimeout)
-	defer cancel()
+func (p *AlicloudProvider) IsSupported(ctx context.Context) bool {
 
 	_, err := p.doMetadataRequest(ctx, AlicloudMetaDataHostnameUrl)
 	if err != nil {
@@ -79,7 +76,7 @@ func (p *AlicloudProvider) startMonitoring(ctx context.Context, e chan<- Termina
 			}
 
 			// Check for spot termination
-			terminationDetected, err := p.isSpotTerminationDetected()
+			terminationDetected, err := p.isSpotTerminationDetected(ctx)
 			if err != nil {
 				p.logger.Error("failed to detect spot termination", "error", err.Error())
 				p.mu.Unlock()
@@ -95,7 +92,7 @@ func (p *AlicloudProvider) startMonitoring(ctx context.Context, e chan<- Termina
 					defer p.mu.Unlock()
 					p.logger.Info("monitoring will be stopped and continue to handler")
 
-					t := p.getInstanceMetadatas()
+					t := p.getInstanceMetadatas(ctx)
 					e <- t
 				}()
 
@@ -111,9 +108,7 @@ func (p *AlicloudProvider) startMonitoring(ctx context.Context, e chan<- Termina
 	}
 }
 
-func (p *AlicloudProvider) isSpotTerminationDetected() (bool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), AlicloudMetadataRequestTimeout)
-	defer cancel()
+func (p *AlicloudProvider) isSpotTerminationDetected(ctx context.Context) (bool, error) {
 
 	// Get spot instance action metadata
 	_, err := p.doMetadataRequest(ctx, AlicloudMetaDataSpotUrl)
@@ -124,12 +119,8 @@ func (p *AlicloudProvider) isSpotTerminationDetected() (bool, error) {
 	return true, nil
 }
 
-func (p *AlicloudProvider) getInstanceMetadatas() TerminationEvent {
+func (p *AlicloudProvider) getInstanceMetadatas(ctx context.Context) TerminationEvent {
 	var t TerminationEvent
-
-	// Create context with timeout for metadata requests
-	ctx, cancel := context.WithTimeout(context.Background(), AlicloudMetadataRequestTimeout)
-	defer cancel()
 
 	// Get hostname - log error but continue
 	if hostname, err := p.doMetadataRequest(ctx, AlicloudMetaDataHostnameUrl); err != nil {

@@ -24,7 +24,7 @@ func (p *DummyProvider) Name() ProviderName {
 	return ProviderDummy
 }
 
-func (p *DummyProvider) IsSupported() bool {
+func (p *DummyProvider) IsSupported(ctx context.Context) bool {
 	p.logger.Info("dummy provider detected")
 	return true
 }
