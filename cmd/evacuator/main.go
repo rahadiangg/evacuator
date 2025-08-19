@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -26,9 +27,6 @@ type HandlerResult struct {
 // Application configuration constants
 const (
 
-	// Dummy provider detection wait time for testing
-	DummyProviderDetectionWait = 3 * time.Second
-
 	// Handler processing timeout - time allowed for each handler to process termination event
 	// Set to 75 seconds to ensure completion within 2-minute spot termination window
 	// This allows 33 seconds safety buffer before force-terminates the instance
@@ -45,18 +43,14 @@ func main() {
 	var configPath = flag.String("config", "", "path to config file (optional)")
 	flag.Parse()
 
-	// Create default logger with text output to stdout
-	logopt := slog.HandlerOptions{
-		Level: slog.LevelDebug,
-	}
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &logopt))
-
 	v := viper.New()
 	config, err := evacuator.LoadConfig(*configPath, v)
 	if err != nil {
-		logger.Error("failed to load config file", "error", err)
+		fmt.Printf("failed to load config file: %v", err)
 		os.Exit(1)
 	}
+
+	logger := setupLogger()
 
 	// Set the global configuration
 	evacuator.SetGlobalConfig(config)
@@ -82,11 +76,17 @@ func main() {
 		Timeout: parsedTimeout,
 	}
 
+	dummyDetectionWait, err := time.ParseDuration(config.Provider.PollInterval)
+	if err != nil {
+		logger.Error("failed to parse dummy provider detection wait time", "error", err)
+		os.Exit(1)
+	}
+
 	// Register all available providers
 	providers := []evacuator.Provider{
 		evacuator.NewAwsProvider(providerHttpClient, logger),
 		evacuator.NewAlicloudProvider(providerHttpClient, logger),
-		evacuator.NewDummyProvider(logger, DummyProviderDetectionWait),
+		evacuator.NewDummyProvider(logger, dummyDetectionWait*3),
 	}
 
 	// Register all configured handlers
@@ -262,4 +262,40 @@ func broadcastTerminationEvents(ctx context.Context, terminationEvent <-chan eva
 			return
 		}
 	}
+}
+
+func setupLogger() *slog.Logger {
+	var logLeveler slog.Level
+
+	config := evacuator.GetGlobalConfig()
+
+	switch config.Log.Level {
+	case "debug":
+		logLeveler = slog.LevelDebug
+	case "info":
+		logLeveler = slog.LevelInfo
+	case "warn":
+		logLeveler = slog.LevelWarn
+	case "error":
+		logLeveler = slog.LevelError
+	default:
+		logLeveler = slog.LevelInfo
+	}
+
+	// Create default logger with text output to stdout
+	logOpts := slog.HandlerOptions{
+		Level: logLeveler,
+	}
+
+	var logger *slog.Logger
+	switch config.Log.Format {
+	case "text":
+		logger = slog.New(slog.NewTextHandler(os.Stdout, &logOpts))
+	case "json":
+		logger = slog.New(slog.NewJSONHandler(os.Stdout, &logOpts))
+	default:
+		logger = slog.New(slog.NewTextHandler(os.Stdout, &logOpts))
+	}
+
+	return logger
 }
