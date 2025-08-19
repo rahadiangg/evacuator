@@ -100,7 +100,6 @@ var configItems = []ConfigItem{
 	{"LOG_LEVEL", "log.level", "info"},
 	{"LOG_FORMAT", "log.format", "json"},
 	{"HANDLER_KUBERNETES_ENABLED", "handler.kubernetes.enabled", false},
-	{"HANDLER_KUBERNETES_DRAIN_TIMEOUT_SECONDS", "handler.kubernetes.drain_timeout_seconds", 90},
 	{"HANDLER_KUBERNETES_SKIP_DAEMON_SETS", "handler.kubernetes.skip_daemon_sets", true},
 	{"HANDLER_KUBERNETES_DELETE_EMPTY_DIR_DATA", "handler.kubernetes.delete_empty_dir_data", false},
 	{"HANDLER_KUBERNETES_KUBECONFIG", "handler.kubernetes.kubeconfig", nil},

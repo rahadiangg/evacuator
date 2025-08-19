@@ -20,7 +20,6 @@ provider:
 handler:
   kubernetes:
     enabled: false
-    drain_timeout_seconds: 90
     skip_daemon_sets: true
     delete_empty_dir_data: false
     kubeconfig: ""
