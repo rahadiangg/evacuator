@@ -29,8 +29,6 @@ const (
 	AwsMetaDataHostnameUrl   = AwsMetaDataBaseUrl + "/meta-data/hostname"
 	AwsMetaDataInstanceIdUrl = AwsMetaDataBaseUrl + "/meta-data/instance-id"
 	AwsMetaDataLocalIpUrl    = AwsMetaDataBaseUrl + "/meta-data/local-ipv4"
-
-	AwsMonitoringInterval = 2 * time.Second
 )
 
 type AwsResponseSpot struct {
@@ -68,7 +66,16 @@ func (p *AwsProvider) StartMonitoring(ctx context.Context, e chan<- TerminationE
 }
 
 func (p *AwsProvider) startMonitoring(ctx context.Context, e chan<- TerminationEvent) {
-	ticker := time.NewTicker(AwsMonitoringInterval)
+
+	config := GetProviderConfig()
+	interval, err := time.ParseDuration(config.PollInterval)
+	if err != nil {
+		p.logger.Warn("failed to parse poll interval", "error", err.Error())
+		p.logger.Warn("using default interval of 3 seconds")
+		interval = 3 * time.Second
+	}
+
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	for {

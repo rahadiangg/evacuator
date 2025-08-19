@@ -28,9 +28,6 @@ const (
 	AlicloudMetaDataHostnameUrl   = AlicloudMetaDataBaseUrl + "/meta-data/hostname"
 	AlicloudMetaDataInstanceIdUrl = AlicloudMetaDataBaseUrl + "/meta-data/instance-id"
 	AlicloudMetaDataLocalIpUrl    = AlicloudMetaDataBaseUrl + "/meta-data/private-ipv4"
-
-	// Alicloud metadata service timeout constants
-	AlicloudMonitoringInterval = 2 * time.Second
 )
 
 func NewAlicloudProvider(client *http.Client, logger *slog.Logger) *AlicloudProvider {
@@ -63,7 +60,16 @@ func (p *AlicloudProvider) StartMonitoring(ctx context.Context, e chan<- Termina
 }
 
 func (p *AlicloudProvider) startMonitoring(ctx context.Context, e chan<- TerminationEvent) {
-	ticker := time.NewTicker(AlicloudMonitoringInterval)
+
+	config := GetProviderConfig()
+	interval, err := time.ParseDuration(config.PollInterval)
+	if err != nil {
+		p.logger.Warn("failed to parse poll interval", "error", err.Error())
+		p.logger.Warn("using default interval of 3 seconds")
+		interval = 3 * time.Second
+	}
+
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	for {
