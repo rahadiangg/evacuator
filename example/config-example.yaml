@@ -2,40 +2,36 @@
 # This shows the actual YAML structure supported by the application
 # Most users should use environment variables instead of config files
 #
-# CONFIGURATION SYSTEM:
-# The application supports configuration through:
-# - Environment variables
-# - YAML configuration files
-# - Built-in defaults
-#
+
 # Configuration precedence (highest to lowest priority):
 # 1. Environment variables
 # 2. Configuration file values
 # 3. Default values
 
-node_name: ""    # The node name to monitor (auto-detected from NODE_NAME env var or cloud provider)
+
+node_name: ""
 
 provider:
-  name: ""              # Manually specify cloud provider: alibaba (ALWAYS takes priority)
-  auto_detect: true         # Auto-detect when provider is empty (ignored when provider is set)
-  poll_interval: "5s"       # How often to check for spot termination events (3s-30s, default: 5s)
-  request_timeout: "3s"    # Timeout for cloud provider API calls (default: 3s)
+  name: ""
+  auto_detect: true
+  poll_interval: "3s"
+  request_timeout: "2s"
 
 handler:
   kubernetes:
-    enabled: true
-    drain_timeout_seconds: 90      # 1.5 minutes - suitable for 2-minute spot termination notice
+    enabled: false
+    drain_timeout_seconds: 90
     skip_daemon_sets: true
     delete_empty_dir_data: false
-    kubeconfig: ""                 # Path to kubeconfig file (empty for default locations)
-    in_cluster: true               # Use in-cluster configuration when running as DaemonSet
+    kubeconfig: ""
+    in_cluster: true
 
   telegram:
-    enabled: false               # Disabled by default, requires manual configuration
-    bot_token: ""               # Telegram bot token (get from @BotFather)
-    chat_id: ""                 # Chat ID where to send notifications
+    enabled: false
+    bot_token:
+    chat_id:
 
 log:
-  level: "info"        # debug, info, warn, error
-  format: "json"       # json, text
+  level: "info"
+  format: "json"
 
