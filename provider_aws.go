@@ -30,9 +30,7 @@ const (
 	AwsMetaDataInstanceIdUrl = AwsMetaDataBaseUrl + "/meta-data/instance-id"
 	AwsMetaDataLocalIpUrl    = AwsMetaDataBaseUrl + "/meta-data/local-ipv4"
 
-	// AWS metadata service timeout constants
-	AwsMetadataRequestTimeout = 2 * time.Second
-	AwsMonitoringInterval     = 2 * time.Second
+	AwsMonitoringInterval = 2 * time.Second
 )
 
 type AwsResponseSpot struct {
@@ -51,9 +49,7 @@ func (p *AwsProvider) Name() ProviderName {
 	return ProviderAWS
 }
 
-func (p *AwsProvider) IsSupported() bool {
-	ctx, cancel := context.WithTimeout(context.Background(), AwsMetadataRequestTimeout)
-	defer cancel()
+func (p *AwsProvider) IsSupported(ctx context.Context) bool {
 
 	_, err := p.doMetadataRequest(ctx, AwsMetaDataHostnameUrl)
 	if err != nil {
@@ -85,7 +81,7 @@ func (p *AwsProvider) startMonitoring(ctx context.Context, e chan<- TerminationE
 			}
 
 			// Check for spot termination
-			terminationDetected, err := p.isSpotTerminationDetected()
+			terminationDetected, err := p.isSpotTerminationDetected(ctx)
 			if err != nil {
 				p.logger.Error("failed to detect spot termination", "error", err.Error())
 				p.mu.Unlock()
@@ -101,7 +97,7 @@ func (p *AwsProvider) startMonitoring(ctx context.Context, e chan<- TerminationE
 					defer p.mu.Unlock()
 					p.logger.Info("monitoring will be stopped and continue to handler")
 
-					t := p.getInstanceMetadatas()
+					t := p.getInstanceMetadatas(ctx)
 					e <- t
 				}()
 
@@ -117,9 +113,7 @@ func (p *AwsProvider) startMonitoring(ctx context.Context, e chan<- TerminationE
 	}
 }
 
-func (p *AwsProvider) isSpotTerminationDetected() (bool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), AwsMetadataRequestTimeout)
-	defer cancel()
+func (p *AwsProvider) isSpotTerminationDetected(ctx context.Context) (bool, error) {
 
 	// Get spot instance action metadata
 	spotInfo, err := p.doMetadataRequest(ctx, AwsMetaDataSpotUrl)
@@ -140,12 +134,8 @@ func (p *AwsProvider) isSpotTerminationDetected() (bool, error) {
 	return true, nil
 }
 
-func (p *AwsProvider) getInstanceMetadatas() TerminationEvent {
+func (p *AwsProvider) getInstanceMetadatas(ctx context.Context) TerminationEvent {
 	var t TerminationEvent
-
-	// Create context with timeout for metadata requests
-	ctx, cancel := context.WithTimeout(context.Background(), AwsMetadataRequestTimeout)
-	defer cancel()
 
 	// Get hostname - log error but continue
 	if hostname, err := p.doMetadataRequest(ctx, AwsMetaDataHostnameUrl); err != nil {

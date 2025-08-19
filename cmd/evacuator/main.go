@@ -2,15 +2,18 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
 
 	"github.com/rahadiangg/evacuator"
+	"github.com/spf13/viper"
 )
 
 // HandlerResult represents the result of processing a termination event by a handler
@@ -22,28 +25,25 @@ type HandlerResult struct {
 
 // Application configuration constants
 const (
-	// HTTP client timeout for external requests
-	HTTPClientTimeout = 10 * time.Second
 
 	// Dummy provider detection wait time for testing
 	DummyProviderDetectionWait = 3 * time.Second
 
 	// Handler processing timeout - time allowed for each handler to process termination event
-	// Set to 75 seconds to ensure completion within AWS 2-minute spot termination window
-	// This allows 33 seconds safety buffer before AWS force-terminates the instance
+	// Set to 75 seconds to ensure completion within 2-minute spot termination window
+	// This allows 33 seconds safety buffer before force-terminates the instance
 	HandlerProcessingTimeout = 75 * time.Second
 
 	// Graceful shutdown timeout - maximum time to wait for goroutines to finish
 	// Reduced to 10 seconds since handlers should already be complete
-	// This is just for final cleanup before AWS termination deadline
+	// This is just for final cleanup before termination deadline
 	GracefulShutdownTimeout = 10 * time.Second
 )
 
 func main() {
-	// Create default HTTP client with reasonable timeout
-	httpClient := &http.Client{
-		Timeout: HTTPClientTimeout,
-	}
+	// Parse command-line flags
+	var configPath = flag.String("config", "", "path to config file (optional)")
+	flag.Parse()
 
 	// Create default logger with text output to stdout
 	logopt := slog.HandlerOptions{
@@ -51,11 +51,42 @@ func main() {
 	}
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &logopt))
 
+	v := viper.New()
+	config, err := evacuator.LoadConfig(*configPath, v)
+	if err != nil {
+		logger.Error("failed to load config file", "error", err)
+		os.Exit(1)
+	}
+
+	// Set the global configuration
+	evacuator.SetGlobalConfig(config)
+
+	// Log the configuration source
+	if *configPath != "" {
+		if v.ConfigFileUsed() != "" {
+			logger.Info("loaded configuration from file", "file", v.ConfigFileUsed())
+		} else {
+			logger.Info("config file specified but not found, using environment variables and defaults", "file", *configPath)
+		}
+	} else {
+		logger.Info("no config file specified, using environment variables and defaults")
+	}
+
+	// Create default HTTP client with reasonable timeout
+	parsedTimeout, err := time.ParseDuration(config.Provider.RequestTimeout)
+	if err != nil {
+		logger.Error("failed to parse provider request timeout", "error", err)
+		os.Exit(1)
+	}
+	providerHttpClient := &http.Client{
+		Timeout: parsedTimeout,
+	}
+
 	// Register all available providers
 	providers := []evacuator.Provider{
-		evacuator.NewAwsProvider(httpClient, logger),
-		evacuator.NewAlicloudProvider(httpClient, logger),
-		evacuator.NewDummyProvider(logger, DummyProviderDetectionWait),
+		evacuator.NewAwsProvider(providerHttpClient, logger),
+		// evacuator.NewAlicloudProvider(providerHttpClient, logger),
+		// evacuator.NewDummyProvider(logger, DummyProviderDetectionWait),
 	}
 
 	// Register all configured handlers
@@ -66,16 +97,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Create root context for coordinated shutdown
+	rootCtx, rootCancel := context.WithCancel(context.Background())
+	defer rootCancel()
+
 	// Detect the current cloud provider environment
-	provider := DetectProvider(providers, logger)
+	provider := DetectProvider(rootCtx, providers, logger)
 	if provider == nil {
 		logger.Error("no supported provider detected")
 		os.Exit(1)
 	}
-
-	// Create root context for coordinated shutdown
-	rootCtx, rootCancel := context.WithCancel(context.Background())
-	defer rootCancel()
 
 	// Create channel for termination events from provider
 	terminationEvent := make(chan evacuator.TerminationEvent)
@@ -125,18 +156,44 @@ func main() {
 }
 
 // DetectProvider automatically detects which cloud provider is currently running.
-// It iterates through all registered providers and returns the first one that
-// reports it is supported in the current environment.
-func DetectProvider(providers []evacuator.Provider, logger *slog.Logger) evacuator.Provider {
+// It first checks if a specific provider is configured, then falls back to auto-detection
+// if auto_detect is enabled. Uses global configuration.
+func DetectProvider(ctx context.Context, providers []evacuator.Provider, logger *slog.Logger) evacuator.Provider {
+	providerConfig := evacuator.GetProviderConfig()
 
+	// when specified provider configured use it
+	if providerConfig.Name != "" {
+		for _, p := range providers {
+			if strings.EqualFold(string(p.Name()), providerConfig.Name) {
+				if p.IsSupported(ctx) {
+					logger.Info("configured provider detected and supported", "provider_name", p.Name())
+					return p
+				} else {
+					logger.Warn("configured provider not supported in current environment", "provider_name", p.Name())
+					return nil
+				}
+			}
+		}
+		logger.Error("configured provider not found", "provider_name", providerConfig.Name)
+		return nil
+	}
+
+	// If auto-detection is disabled and no provider is specified, return nil
+	if !providerConfig.AutoDetect {
+		logger.Error("auto-detection disabled and no provider specified")
+		return nil
+	}
+
+	// Auto-detect provider
+	logger.Info("auto-detecting cloud provider")
 	for _, p := range providers {
-		if p.IsSupported() {
-			logger.Info("provider detected", "provider_name", p.Name())
+		if p.IsSupported(ctx) {
+			logger.Info("provider auto-detected", "provider_name", p.Name())
 			return p
 		}
 	}
 
-	logger.Debug("no supported provider detected")
+	logger.Debug("no supported provider detected during auto-detection")
 	return nil
 }
 

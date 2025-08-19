@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 )
 
 type TerminationEvent struct {
@@ -46,24 +45,31 @@ func (r *HandlerRegistry) RegisterHandlers() ([]Handler, error) {
 	var handlers []Handler
 	var errors []error
 
-	// Register Kubernetes handler
-	kubernetesHandler, err := r.createKubernetesHandler()
-	if err != nil {
-		r.logger.Error("failed to create kubernetes handler", "error", err)
-		errors = append(errors, fmt.Errorf("kubernetes handler: %w", err))
-	} else {
-		handlers = append(handlers, kubernetesHandler)
-		r.logger.Info("kubernetes handler registered successfully")
+	// Get global configuration
+	handlerConfig := GetHandlerConfig()
+
+	// Register Kubernetes handler if enabled
+	if handlerConfig.Kubernetes.Enabled {
+		kubernetesHandler, err := r.createKubernetesHandler()
+		if err != nil {
+			r.logger.Error("failed to create kubernetes handler", "error", err)
+			errors = append(errors, fmt.Errorf("kubernetes handler: %w", err))
+		} else {
+			handlers = append(handlers, kubernetesHandler)
+			r.logger.Info("kubernetes handler registered successfully")
+		}
 	}
 
-	// Register Telegram handler
-	telegramHandler, err := r.createTelegramHandler()
-	if err != nil {
-		r.logger.Error("failed to create telegram handler", "error", err)
-		errors = append(errors, fmt.Errorf("telegram handler: %w", err))
-	} else {
-		handlers = append(handlers, telegramHandler)
-		r.logger.Info("telegram handler registered successfully")
+	// Register Telegram handler if enabled
+	if handlerConfig.Telegram.Enabled {
+		telegramHandler, err := r.createTelegramHandler()
+		if err != nil {
+			r.logger.Error("failed to create telegram handler", "error", err)
+			errors = append(errors, fmt.Errorf("telegram handler: %w", err))
+		} else {
+			handlers = append(handlers, telegramHandler)
+			r.logger.Info("telegram handler registered successfully")
+		}
 	}
 
 	// Return error if no handlers were registered
@@ -80,16 +86,15 @@ func (r *HandlerRegistry) RegisterHandlers() ([]Handler, error) {
 }
 
 func (r *HandlerRegistry) createKubernetesHandler() (Handler, error) {
+	handlerConfig := GetHandlerConfig()
 	return NewKubernetesHandler(&KubernetesHandlerConfig{
-		InCluster:            true, // Default to in-cluster configuration
-		CustomKubeConfigPath: "",   // Can be made configurable later
+		InCluster:            handlerConfig.Kubernetes.InCluster,
+		CustomKubeConfigPath: handlerConfig.Kubernetes.Kubeconfig,
 	}, r.logger)
 }
 
 func (r *HandlerRegistry) createTelegramHandler() (Handler, error) {
-	// Read from environment variables for now
-	botToken := os.Getenv("TELEGRAM_BOT_TOKEN")
-	chatID := os.Getenv("TELEGRAM_CHAT_ID")
+	handlerConfig := GetHandlerConfig()
 
-	return NewTelegramHandler(r.logger, botToken, chatID)
+	return NewTelegramHandler(r.logger, handlerConfig.Telegram.BotToken, handlerConfig.Telegram.ChatID)
 }

@@ -4,8 +4,8 @@
 #
 # CONFIGURATION SYSTEM:
 # The application supports configuration through:
-# - Environment variables (recommended for production)
-# - YAML configuration files (good for development/testing)
+# - Environment variables
+# - YAML configuration files
 # - Built-in defaults
 #
 # Configuration precedence (highest to lowest priority):
@@ -13,31 +13,20 @@
 # 2. Configuration file values
 # 3. Default values
 
-dry_run: false   # Set to true to simulate actions without actually draining nodes
 node_name: ""    # The node name to monitor (auto-detected from NODE_NAME env var or cloud provider)
 
-monitoring:
-  provider: ""              # Manually specify cloud provider: alibaba (ALWAYS takes priority)
+provider:
+  name: ""              # Manually specify cloud provider: alibaba (ALWAYS takes priority)
   auto_detect: true         # Auto-detect when provider is empty (ignored when provider is set)
-  event_buffer_size: 100    # Buffer size for termination event channels
   poll_interval: "5s"       # How often to check for spot termination events (3s-30s, default: 5s)
-  provider_timeout: "3s"    # Timeout for cloud provider API calls (default: 3s)
+  request_timeout: "3s"    # Timeout for cloud provider API calls (default: 3s)
 
-# Note: The application automatically detects Alibaba Cloud by checking its metadata service
-# Provider configurations use built-in defaults - remove providers section to use defaults
-
-handlers:
-  log:
-    enabled: true
-  
+handler:
   kubernetes:
     enabled: true
     drain_timeout_seconds: 90      # 1.5 minutes - suitable for 2-minute spot termination notice
-    force_eviction_after: "90s"    # Force evict pods after 1.5 minutes
     skip_daemon_sets: true
     delete_empty_dir_data: false
-    ignore_pod_disruption: true    # Ignore PDBs during emergency evacuation
-    grace_period_seconds: 10       # Shorter grace period for faster evacuation
     kubeconfig: ""                 # Path to kubeconfig file (empty for default locations)
     in_cluster: true               # Use in-cluster configuration when running as DaemonSet
 
@@ -45,151 +34,8 @@ handlers:
     enabled: false               # Disabled by default, requires manual configuration
     bot_token: ""               # Telegram bot token (get from @BotFather)
     chat_id: ""                 # Chat ID where to send notifications
-    timeout: "10s"              # HTTP request timeout for Telegram API
-    send_raw: false             # Send raw event data in addition to formatted message
-
-# Telegram Setup Guide:
-# 1. Create bot: Message @BotFather, send /newbot, save the token
-# 2. Get chat ID: Add bot to chat, send message, visit:
-#    https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates
-# 3. For security, use environment variables instead:
-#    TELEGRAM_BOT_TOKEN="bot123456:ABC..." TELEGRAM_CHAT_ID="-100123..."
-#
-# send_raw option: When enabled, ALWAYS sends raw JSON data as PRIORITY #1
-# even if formatted message fails. Uses multi-layer emergency fallbacks to 
-# guarantee incident data is captured. Critical for production monitoring
-# where missing termination events could cause data loss or service disruption.
-
-# About Kubernetes Configuration:
-# - handlers.kubernetes.in_cluster: true  = Use ServiceAccount (recommended for DaemonSet deployment)
-# - handlers.kubernetes.in_cluster: false = Use kubeconfig file (for testing/development)
-# - handlers.kubernetes.kubeconfig: Path to kubeconfig file (empty for default locations)
-# 
-# About Node Name Configuration:
-# - node_name: Auto-detected from NODE_NAME environment variable
-# - In DaemonSet deployments, NODE_NAME is typically set using downward API
-# - Fallback: Uses cloud provider instance ID if no environment variable is set
-# - This is the core node that the evacuator monitors for termination events
 
 log:
   level: "info"        # debug, info, warn, error
   format: "json"       # json, text
 
-# ===============================================================================
-# ENVIRONMENT VARIABLES CONFIGURATION
-# ===============================================================================
-# 
-# Environment variables are the recommended way to configure this application.
-# Variables follow the YAML structure: section.key becomes SECTION_KEY
-# Example: dry_run → DRY_RUN, monitoring.provider → MONITORING_PROVIDER
-#
-# ===== APPLICATION SETTINGS =====
-# DRY_RUN="false"                       # dry_run - Enable dry-run mode (no actual actions)
-# NODE_NAME=""                          # node_name - Node name to monitor (auto-detected if empty)
-#
-# ===== MONITORING SETTINGS =====
-# MONITORING_PROVIDER=""                 # monitoring.provider - Force cloud provider: "alibaba"
-# MONITORING_AUTO_DETECT="true"          # monitoring.auto_detect - Auto-detect cloud provider
-# MONITORING_POLL_INTERVAL="5s"          # monitoring.poll_interval - Check interval (3s-30s)
-# MONITORING_PROVIDER_TIMEOUT="3s"       # monitoring.provider_timeout - API call timeout
-# MONITORING_EVENT_BUFFER_SIZE="100"     # monitoring.event_buffer_size - Event buffer size
-#
-# ===== HANDLER SETTINGS =====
-# HANDLERS_LOG_ENABLED="true"            # handlers.log.enabled - Enable log handler
-# HANDLERS_KUBERNETES_ENABLED="true"     # handlers.kubernetes.enabled - Enable Kubernetes handler
-#
-# ===== KUBERNETES DRAIN SETTINGS =====
-# HANDLERS_KUBERNETES_DRAIN_TIMEOUT_SECONDS="90"        # handlers.kubernetes.drain_timeout_seconds
-# HANDLERS_KUBERNETES_FORCE_EVICTION_AFTER="90s"        # handlers.kubernetes.force_eviction_after
-# HANDLERS_KUBERNETES_SKIP_DAEMON_SETS="true"           # handlers.kubernetes.skip_daemon_sets
-# HANDLERS_KUBERNETES_DELETE_EMPTY_DIR_DATA="false"     # handlers.kubernetes.delete_empty_dir_data
-# HANDLERS_KUBERNETES_IGNORE_POD_DISRUPTION="true"      # handlers.kubernetes.ignore_pod_disruption
-# HANDLERS_KUBERNETES_GRACE_PERIOD_SECONDS="10"         # handlers.kubernetes.grace_period_seconds
-# HANDLERS_KUBERNETES_KUBECONFIG=""                     # handlers.kubernetes.kubeconfig - Path to kubeconfig
-# HANDLERS_KUBERNETES_IN_CLUSTER="true"                 # handlers.kubernetes.in_cluster - Use in-cluster config
-#
-# ===== TELEGRAM NOTIFICATION SETTINGS =====
-# HANDLERS_TELEGRAM_ENABLED="false"      # handlers.telegram.enabled - Enable Telegram notifications
-# HANDLERS_TELEGRAM_BOT_TOKEN=""         # handlers.telegram.bot_token - Telegram bot token
-# HANDLERS_TELEGRAM_CHAT_ID=""           # handlers.telegram.chat_id - Chat ID for notifications
-# HANDLERS_TELEGRAM_TIMEOUT="10s"        # handlers.telegram.timeout - HTTP request timeout
-# HANDLERS_TELEGRAM_SEND_RAW="false"     # handlers.telegram.send_raw - Send raw event data
-#
-# ===== LOGGING SETTINGS =====
-# LOG_LEVEL="info"                   # log.level - Log level (debug/info/warn/error)
-# LOG_FORMAT="json"                  # log.format - Log format (json/text)
-#
-# ===== CONFIGURATION FILE OVERRIDE =====
-# CONFIG_FILE=""                         # Path to custom configuration file
-#
-# ===============================================================================
-# USAGE EXAMPLES
-# ===============================================================================
-#
-# Basic usage:
-#   DRY_RUN=true LOG_LEVEL=debug ./evacuator
-#   MONITORING_PROVIDER=alibaba HANDLERS_TELEGRAM_ENABLED=true ./evacuator
-#
-# With custom config file:
-#   CONFIG_FILE="./my-config.yaml" ./evacuator
-#
-# Complete production example:
-#   DRY_RUN=false \
-#   MONITORING_PROVIDER=alibaba \
-#   HANDLERS_TELEGRAM_ENABLED=true \
-#   HANDLERS_TELEGRAM_BOT_TOKEN="bot123456:ABC-DEF" \
-#   HANDLERS_TELEGRAM_CHAT_ID="-100123456789" \
-#   LOG_LEVEL=info \
-#   LOG_FORMAT=json \
-#   ./evacuator
-#
-# ===============================================================================
-# KUBERNETES DAEMONSET CONFIGURATION
-# ===============================================================================
-#
-# Example environment variables for Kubernetes DaemonSet deployment:
-#
-# env:
-#   - name: DRY_RUN
-#     value: "false"
-#   - name: LOG_LEVEL  
-#     value: "info"
-#   - name: LOG_FORMAT
-#     value: "json"
-#   - name: NODE_NAME
-#     valueFrom:
-#       fieldRef:
-#         fieldPath: spec.nodeName
-#   - name: MONITORING_POLL_INTERVAL
-#     value: "5s"
-#   - name: HANDLERS_TELEGRAM_ENABLED
-#     value: "true"
-#   - name: HANDLERS_TELEGRAM_BOT_TOKEN
-#     valueFrom:
-#       secretKeyRef:
-#         name: evacuator-telegram
-#         key: bot-token
-#   - name: HANDLERS_TELEGRAM_CHAT_ID
-#     valueFrom:
-#       secretKeyRef:
-#         name: evacuator-telegram
-#         key: chat-id
-#
-# ===============================================================================
-# TELEGRAM SETUP GUIDE
-# ===============================================================================
-#
-# 1. Create a bot:
-#    - Message @BotFather on Telegram
-#    - Send /newbot and follow instructions
-#    - Save the bot token
-#
-# 2. Get chat ID:
-#    - For private chat: Start chat with bot, send a message, then visit:
-#      https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates
-#    - For group chat: Add bot to group, send message mentioning bot, check same URL
-#
-# 3. Test connection:
-#    curl -X POST "https://api.telegram.org/bot<BOT_TOKEN>/sendMessage" \
-#      -H "Content-Type: application/json" \
-#      -d '{"chat_id": "<CHAT_ID>", "text": "Test from evacuator"}'
