@@ -71,7 +71,7 @@ func main() {
 		Timeout: parsedTimeout,
 	}
 
-	dummyDetectionWait, err := time.ParseDuration(config.Provider.PollInterval)
+	dummyDetectionWait, err := time.ParseDuration(config.Provider.Dummy.DetectionWait)
 	if err != nil {
 		logger.Error("failed to parse dummy provider detection wait time", "error", err)
 		os.Exit(1)
@@ -81,7 +81,10 @@ func main() {
 	providers := []evacuator.Provider{
 		evacuator.NewAwsProvider(providerHttpClient, logger),
 		evacuator.NewAlicloudProvider(providerHttpClient, logger),
-		evacuator.NewDummyProvider(logger, dummyDetectionWait*3),
+	}
+
+	if config.Provider.Dummy.Enabled {
+		providers = append(providers, evacuator.NewDummyProvider(logger, dummyDetectionWait))
 	}
 
 	// Register all configured handlers

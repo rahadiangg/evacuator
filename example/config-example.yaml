@@ -47,6 +47,19 @@ provider:
   ## Format: duration string (e.g., "2s", "5s")
   request_timeout: "2s"
 
+  ## Dummy provider configuration for testing and development
+  ## The dummy provider simulates spot instance termination events
+  ## without requiring actual cloud infrastructure
+  dummy:
+    enabled: false
+    
+    ## Time to wait before triggering a fake termination event
+    ## This simulates the delay between starting monitoring and 
+    ## detecting a spot instance termination notice
+    ## Used for testing handler behavior and timing
+    ## Format: duration string (e.g., "10s", "30s", "2m")
+    detection_wait: "10s"
+
 handler:
 
   ## Handler processing timeout - time allowed for each handler to process termination event

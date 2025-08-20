@@ -35,15 +35,21 @@ type TelegramConfig struct {
 }
 
 type ProviderConfig struct {
-	Name           string `mapstructure:"name"`
-	AutoDetect     bool   `mapstructure:"auto_detect"`
-	PollInterval   string `mapstructure:"poll_interval"`
-	RequestTimeout string `mapstructure:"request_timeout"`
+	Name           string              `mapstructure:"name"`
+	AutoDetect     bool                `mapstructure:"auto_detect"`
+	PollInterval   string              `mapstructure:"poll_interval"`
+	RequestTimeout string              `mapstructure:"request_timeout"`
+	Dummy          ProviderConfigDummy `mapstructure:"dummy"`
 }
 
 type LogConfig struct {
 	Level  string `mapstructure:"level"`
 	Format string `mapstructure:"format"`
+}
+
+type ProviderConfigDummy struct {
+	Enabled       bool   `mapstructure:"enabled"`
+	DetectionWait string `mapstructure:"detection_wait"`
 }
 
 func LoadConfig(configPath string, v *viper.Viper) (*Config, error) {
@@ -97,6 +103,8 @@ var configItems = []ConfigItem{
 	{"PROVIDER_AUTO_DETECT", "provider.auto_detect", true},
 	{"PROVIDER_POLL_INTERVAL", "provider.poll_interval", "3s"},
 	{"PROVIDER_REQUEST_TIMEOUT", "provider.request_timeout", "2s"},
+	{"PROVIDER_DUMMY_ENABLED", "provider.dummy.enabled", false},
+	{"PROVIDER_DUMMY_DETECTION_WAIT", "provider.dummy.detection_wait", "10s"},
 	{"LOG_LEVEL", "log.level", "info"},
 	{"LOG_FORMAT", "log.format", "json"},
 	{"HANDLER_PROCESSING_TIMEOUT", "handler.processing_timeout", "75s"},
