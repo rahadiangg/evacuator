@@ -66,13 +66,8 @@ func main() {
 	}
 
 	// Create default HTTP client with reasonable timeout
-	parsedTimeout, err := time.ParseDuration(config.Provider.RequestTimeout)
-	if err != nil {
-		logger.Error("failed to parse provider request timeout", "error", err)
-		os.Exit(1)
-	}
 	providerHttpClient := &http.Client{
-		Timeout: parsedTimeout,
+		Timeout: config.Provider.RequestTimeout,
 	}
 
 	dummyDetectionWait, err := time.ParseDuration(config.Provider.Dummy.DetectionWait)
@@ -221,16 +216,7 @@ func broadcastTerminationEvents(ctx context.Context, terminationEvent <-chan eva
 				go func(h evacuator.Handler) {
 					defer handlerWg.Done()
 
-					// Create context with timeout for handler processing
-					// Uses HandlerProcessingTimeout constant for consistency
-
-					processingTimeout, err := time.ParseDuration(config.Handler.ProcessingTimeout)
-					if err != nil {
-						logger.Error("failed to parse processing timeout, will use default config", "error", err)
-						processingTimeout = 75 * time.Second
-					}
-
-					handlerCtx, cancel := context.WithTimeout(ctx, processingTimeout)
+					handlerCtx, cancel := context.WithTimeout(ctx, config.Handler.ProcessingTimeout)
 					defer cancel()
 
 					logger.Debug("processing termination event with handler", "handler_name", h.Name())
@@ -240,7 +226,7 @@ func broadcastTerminationEvents(ctx context.Context, terminationEvent <-chan eva
 						event.Hostname = config.NodeName
 					}
 
-					err = h.HandleTermination(handlerCtx, event)
+					err := h.HandleTermination(handlerCtx, event)
 					results <- HandlerResult{
 						HandlerName: h.Name(),
 						Error:       err,

@@ -68,14 +68,8 @@ func (p *AwsProvider) StartMonitoring(ctx context.Context, e chan<- TerminationE
 func (p *AwsProvider) startMonitoring(ctx context.Context, e chan<- TerminationEvent) {
 
 	config := GetProviderConfig()
-	interval, err := time.ParseDuration(config.PollInterval)
-	if err != nil {
-		p.logger.Warn("failed to parse poll interval", "error", err.Error(), "provider", p.Name())
-		p.logger.Warn("using default interval of 3 seconds", "provider", p.Name())
-		interval = 3 * time.Second
-	}
 
-	ticker := time.NewTicker(interval)
+	ticker := time.NewTicker(config.PollInterval)
 	defer ticker.Stop()
 
 	for {

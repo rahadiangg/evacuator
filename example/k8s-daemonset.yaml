@@ -55,8 +55,12 @@ data:
       auto_detect: true
       poll_interval: "3s"
       request_timeout: "2s"
+      dummy:
+        enabled: false
+        detection_wait: "10s"
 
     handler:
+      processing_timeout: "75s"
       kubernetes:
         enabled: true
         skip_daemon_sets: true

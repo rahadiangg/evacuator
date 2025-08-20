@@ -40,11 +40,6 @@ func NewKubernetesHandler(config *KubernetesHandlerConfig, logger *slog.Logger) 
 		}
 	} else {
 
-		// validate custom kubeconfig path
-		if config.CustomKubeConfigPath == "" {
-			return nil, fmt.Errorf("custom kubeconfig path must be specified")
-		}
-
 		var err error
 		k8sRestConfig, err = clientcmd.BuildConfigFromFlags("", config.CustomKubeConfigPath)
 		if err != nil {

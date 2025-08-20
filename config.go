@@ -1,8 +1,10 @@
 package evacuator
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -15,9 +17,11 @@ type Config struct {
 }
 
 type HandlerConfig struct {
-	ProcessingTimeout string           `mapstructure:"processing_timeout"`
-	Kubernetes        KubernetesConfig `mapstructure:"kubernetes"`
-	Telegram          TelegramConfig   `mapstructure:"telegram"`
+	ProcessingTimeoutRaw string        `mapstructure:"processing_timeout"`
+	ProcessingTimeout    time.Duration `mapstructure:"-"`
+
+	Kubernetes KubernetesConfig `mapstructure:"kubernetes"`
+	Telegram   TelegramConfig   `mapstructure:"telegram"`
 }
 
 type KubernetesConfig struct {
@@ -35,11 +39,13 @@ type TelegramConfig struct {
 }
 
 type ProviderConfig struct {
-	Name           string              `mapstructure:"name"`
-	AutoDetect     bool                `mapstructure:"auto_detect"`
-	PollInterval   string              `mapstructure:"poll_interval"`
-	RequestTimeout string              `mapstructure:"request_timeout"`
-	Dummy          ProviderConfigDummy `mapstructure:"dummy"`
+	Name              string              `mapstructure:"name"`
+	AutoDetect        bool                `mapstructure:"auto_detect"`
+	PollIntervalRaw   string              `mapstructure:"poll_interval"`
+	PollInterval      time.Duration       `mapstructure:"-"`
+	RequestTimeoutRaw string              `mapstructure:"request_timeout"`
+	RequestTimeout    time.Duration       `mapstructure:"-"`
+	Dummy             ProviderConfigDummy `mapstructure:"dummy"`
 }
 
 type LogConfig struct {
@@ -86,7 +92,78 @@ func LoadConfig(configPath string, v *viper.Viper) (*Config, error) {
 		return nil, err
 	}
 
+	// Parse duration strings into time.Duration fields
+	if err := parseDurationFields(&config); err != nil {
+		return nil, err
+	}
+
+	// Validate the config after parsing duration fields
+	if err := validateConfig(&config); err != nil {
+		return nil, err
+	}
+
 	return &config, nil
+}
+
+func parseDurationFields(c *Config) error {
+	// Parse handler processing timeout
+	processingTimeout, err := time.ParseDuration(c.Handler.ProcessingTimeoutRaw)
+	if err != nil {
+		return fmt.Errorf("handler.processing_timeout must be a valid duration: %w", err)
+	}
+	c.Handler.ProcessingTimeout = processingTimeout
+
+	providerPollInterval, err := time.ParseDuration(c.Provider.PollIntervalRaw)
+	if err != nil {
+		return fmt.Errorf("provider.poll_interval must be a valid duration: %w", err)
+	}
+	c.Provider.PollInterval = providerPollInterval
+
+	providerRequestTimeout, err := time.ParseDuration(c.Provider.RequestTimeoutRaw)
+	if err != nil {
+		return fmt.Errorf("provider.request_timeout must be a valid duration: %w", err)
+	}
+	c.Provider.RequestTimeout = providerRequestTimeout
+
+	return nil
+}
+
+func validateConfig(c *Config) error {
+
+	// provider
+	if c.Provider.Name == "" && !c.Provider.AutoDetect {
+		return fmt.Errorf("provider.name must be set")
+	}
+
+	// duration things
+	if c.Provider.PollInterval < 3*time.Second || c.Provider.PollInterval > 10*time.Second {
+		return fmt.Errorf("provider.poll_interval must be between 3s and 10s")
+	}
+
+	if c.Provider.RequestTimeout < 1*time.Second || c.Provider.RequestTimeout > 5*time.Second {
+		return fmt.Errorf("provider.request_timeout must be between 1s and 5s")
+	}
+
+	if c.Handler.ProcessingTimeout > 75*time.Second {
+		// for warning not actual error
+		return fmt.Errorf("handler.processing_timeout more than 75s that makes it ineffective")
+	}
+
+	// telegram
+	if c.Handler.Telegram.Enabled {
+		if c.Handler.Telegram.BotToken == "" && c.Handler.Telegram.ChatID == "" {
+			return fmt.Errorf("handler.telegram.bot_token and handler.telegram.chat_id must be set")
+		}
+	}
+
+	// kubernetes
+	if c.Handler.Kubernetes.Enabled {
+		if c.Handler.Kubernetes.Kubeconfig == "" && !c.Handler.Kubernetes.InCluster {
+			return fmt.Errorf("handler.kubernetes.kubeconfig must be set if not running in-cluster")
+		}
+	}
+
+	return nil
 }
 
 // ConfigItem represents a configuration item with its environment variable mapping and default value
