@@ -19,7 +19,33 @@ RUN go build \
     -o evacuator \
     ./cmd/evacuator
 
-# Final stage - using specific alpine version for security
+# Prebuilt stage - for CI optimization using pre-built binaries
+FROM alpine:3.22.1 AS prebuilt
+
+# Install ca-certificates for HTTPS requests
+RUN apk --no-cache add ca-certificates
+
+# Create a non-root user for security
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
+
+# Create app directory and set ownership
+WORKDIR /app
+RUN chown appuser:appgroup /app
+
+# Copy the pre-built binary (expected to be in dist/ from CI)
+COPY dist/evacuator .
+
+# Change ownership of the binary
+RUN chown appuser:appgroup evacuator
+
+# Switch to non-root user
+USER appuser
+
+# Run the binary
+CMD ["./evacuator"]
+
+# Final stage - using specific alpine version for security (default target)
 FROM alpine:3.22.1
 
 # Install ca-certificates for HTTPS requests
