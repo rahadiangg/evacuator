@@ -116,7 +116,7 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           push: true
-          tags: ${{ env.IMAGE_NAME }}:${{ needs.build-binaries.outputs.version }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          tags: ${{ env.IMAGE_NAME }}-nightly:${{ needs.build-binaries.outputs.version }}-${{ matrix.goos }}-${{ matrix.goarch }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -142,8 +142,8 @@ jobs:
           docker buildx imagetools create \
             --tag ${{ env.IMAGE_NAME }}:${VERSION} \
             --tag ${{ env.IMAGE_NAME }}:latest \
-            ${{ env.IMAGE_NAME }}:${VERSION}-linux-amd64 \
-            ${{ env.IMAGE_NAME }}:${VERSION}-linux-arm64
+            ${{ env.IMAGE_NAME }}-nightly:${VERSION}-linux-amd64 \
+            ${{ env.IMAGE_NAME }}-nightly:${VERSION}-linux-arm64
 
       - name: Inspect multi-arch image
         run: |
