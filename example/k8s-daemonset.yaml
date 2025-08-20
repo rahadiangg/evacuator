@@ -98,7 +98,7 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: evacuator
-        image: rahadiangg/evacuator-nightly:nightly
+        image: rahadiangg/evacuator:latest
         args: ["./evacuator", "-config=/etc/evacuator/config.yaml"]
         imagePullPolicy: Always
         env:

@@ -3,9 +3,9 @@
 # Variables
 BINARY_NAME=evacuator
 MAIN_PATH=./cmd/evacuator
-DOCKER_IMAGE=rahadiangg/evacuator-nightly
+DOCKER_IMAGE=rahadiangg/evacuator
 DOCKER_EXTRA_PLATFORM=linux/arm64,linux/amd64
-VERSION?=nightly
+VERSION?=latest
 
 # Go variables
 GOOS?=$(shell go env GOOS)
@@ -43,7 +43,7 @@ run: build ## Build and run the evacuator locally
 .PHONY: docker-build
 docker-build: ## Build Docker image
 	@echo "Building Docker image $(DOCKER_IMAGE):$(VERSION)..."
-	docker buildx build -t $(DOCKER_IMAGE):$(VERSION) --platform $(DOCKER_EXTRA_PLATFORM) --push .
+	docker buildx build -t $(DOCKER_IMAGE):$(VERSION) --platform $(DOCKER_EXTRA_PLATFORM) .
 
 .PHONY: docker-push
 docker-push: ## Push Docker image to registry
