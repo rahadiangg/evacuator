@@ -92,8 +92,8 @@ type ConfigItem struct {
 
 // configItems defines all configuration items with their environment mappings and defaults
 var configItems = []ConfigItem{
-	{"NODE_NAME", "node_name", nil},
-	{"PROVIDER_NAME", "provider.name", nil},
+	{"NODE_NAME", "node_name", ""},
+	{"PROVIDER_NAME", "provider.name", ""},
 	{"PROVIDER_AUTO_DETECT", "provider.auto_detect", true},
 	{"PROVIDER_POLL_INTERVAL", "provider.poll_interval", "3s"},
 	{"PROVIDER_REQUEST_TIMEOUT", "provider.request_timeout", "2s"},
@@ -102,11 +102,11 @@ var configItems = []ConfigItem{
 	{"HANDLER_KUBERNETES_ENABLED", "handler.kubernetes.enabled", false},
 	{"HANDLER_KUBERNETES_SKIP_DAEMON_SETS", "handler.kubernetes.skip_daemon_sets", true},
 	{"HANDLER_KUBERNETES_DELETE_EMPTY_DIR_DATA", "handler.kubernetes.delete_empty_dir_data", false},
-	{"HANDLER_KUBERNETES_KUBECONFIG", "handler.kubernetes.kubeconfig", nil},
+	{"HANDLER_KUBERNETES_KUBECONFIG", "handler.kubernetes.kubeconfig", ""},
 	{"HANDLER_KUBERNETES_IN_CLUSTER", "handler.kubernetes.in_cluster", true},
 	{"HANDLER_TELEGRAM_ENABLED", "handler.telegram.enabled", false},
-	{"HANDLER_TELEGRAM_BOT_TOKEN", "handler.telegram.bot_token", nil},
-	{"HANDLER_TELEGRAM_CHAT_ID", "handler.telegram.chat_id", nil},
+	{"HANDLER_TELEGRAM_BOT_TOKEN", "handler.telegram.bot_token", ""},
+	{"HANDLER_TELEGRAM_CHAT_ID", "handler.telegram.chat_id", ""},
 }
 
 // setDefaults sets default values for configuration
