@@ -45,18 +45,18 @@ func (p *AlicloudProvider) IsSupported(ctx context.Context) bool {
 
 	_, err := p.doMetadataRequest(ctx, AlicloudMetaDataHostnameUrl)
 	if err != nil {
-		p.logger.Debug("fail to detect alicloud provider", "error", err.Error())
+		p.logger.Debug("fail to detect alicloud provider", "error", err.Error(), "provider_name", p.Name())
 		return false
 	}
 
-	p.logger.Info("alicloud provider detected")
+	p.logger.Info("alicloud provider detected", "provider_name", p.Name())
 	return true
 }
 
 func (p *AlicloudProvider) StartMonitoring(ctx context.Context, e chan<- TerminationEvent) {
 
 	go p.startMonitoring(ctx, e)
-	p.logger.Info("alicloud provider monitoring started")
+	p.logger.Info("alicloud provider monitoring started", "provider_name", p.Name())
 }
 
 func (p *AlicloudProvider) startMonitoring(ctx context.Context, e chan<- TerminationEvent) {
@@ -64,8 +64,8 @@ func (p *AlicloudProvider) startMonitoring(ctx context.Context, e chan<- Termina
 	config := GetProviderConfig()
 	interval, err := time.ParseDuration(config.PollInterval)
 	if err != nil {
-		p.logger.Warn("failed to parse poll interval", "error", err.Error())
-		p.logger.Warn("using default interval of 3 seconds")
+		p.logger.Warn("failed to parse poll interval", "error", err.Error(), "provider_name", p.Name())
+		p.logger.Warn("using default interval of 3 seconds", "provider_name", p.Name())
 		interval = 3 * time.Second
 	}
 
@@ -77,26 +77,26 @@ func (p *AlicloudProvider) startMonitoring(ctx context.Context, e chan<- Termina
 		case <-ticker.C:
 			// Use mutex to prevent overlapping executions
 			if !p.mu.TryLock() {
-				p.logger.Debug("spot termination check already in progress, skipping")
+				p.logger.Debug("spot termination check already in progress, skipping", "provider_name", p.Name())
 				continue
 			}
 
 			// Check for spot termination
 			terminationDetected, err := p.isSpotTerminationDetected(ctx)
 			if err != nil {
-				p.logger.Error("failed to detect spot termination", "error", err.Error())
+				p.logger.Error("failed to detect spot termination", "error", err.Error(), "provider_name", p.Name())
 				p.mu.Unlock()
 				continue
 			}
 
 			if terminationDetected {
-				p.logger.Info("spot termination detected")
+				p.logger.Info("spot termination detected", "provider_name", p.Name())
 
 				// Handle termination in a separate goroutine but keep the mutex locked
 				// to prevent further ticker executions
 				go func() {
 					defer p.mu.Unlock()
-					p.logger.Info("monitoring will be stopped and continue to handler")
+					p.logger.Info("monitoring will be stopped and continue to handler", "provider_name", p.Name())
 
 					t := p.getInstanceMetadatas(ctx)
 					e <- t
@@ -130,7 +130,7 @@ func (p *AlicloudProvider) getInstanceMetadatas(ctx context.Context) Termination
 
 	// Get hostname - log error but continue
 	if hostname, err := p.doMetadataRequest(ctx, AlicloudMetaDataHostnameUrl); err != nil {
-		p.logger.Error("failed to get hostname", "error", err.Error())
+		p.logger.Error("failed to get hostname", "error", err.Error(), "provider_name", p.Name())
 		t.Hostname = "unknown"
 	} else {
 		t.Hostname = hostname
@@ -138,7 +138,7 @@ func (p *AlicloudProvider) getInstanceMetadatas(ctx context.Context) Termination
 
 	// Get private IP - log error but continue
 	if privateIP, err := p.doMetadataRequest(ctx, AlicloudMetaDataLocalIpUrl); err != nil {
-		p.logger.Error("failed to get private IP", "error", err.Error())
+		p.logger.Error("failed to get private IP", "error", err.Error(), "provider_name", p.Name())
 		t.PrivateIP = "unknown"
 	} else {
 		t.PrivateIP = privateIP
@@ -146,7 +146,7 @@ func (p *AlicloudProvider) getInstanceMetadatas(ctx context.Context) Termination
 
 	// Get instance ID - log error but continue
 	if instanceID, err := p.doMetadataRequest(ctx, AlicloudMetaDataInstanceIdUrl); err != nil {
-		p.logger.Error("failed to get instance ID", "error", err.Error())
+		p.logger.Error("failed to get instance ID", "error", err.Error(), "provider_name", p.Name())
 		t.InstanceID = "unknown"
 	} else {
 		t.InstanceID = instanceID

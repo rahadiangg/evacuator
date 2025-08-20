@@ -25,7 +25,7 @@ func (p *DummyProvider) Name() ProviderName {
 }
 
 func (p *DummyProvider) IsSupported(ctx context.Context) bool {
-	p.logger.Info("dummy provider detected")
+	p.logger.Info("dummy provider detected", "provider_name", p.Name())
 	return true
 }
 
@@ -33,8 +33,8 @@ func (p *DummyProvider) StartMonitoring(ctx context.Context, e chan<- Terminatio
 
 	go func() {
 		time.Sleep(p.DetectionWait)
-		p.logger.Info("spot termination detected")
-		p.logger.Info("monitoring will be stopped and continue to handler")
+		p.logger.Info("spot termination detected", "provider_name", p.Name())
+		p.logger.Info("monitoring will be stopped and continue to handler", "provider_name", p.Name())
 
 		t := TerminationEvent{
 			Hostname:   "dummy",
@@ -44,5 +44,5 @@ func (p *DummyProvider) StartMonitoring(ctx context.Context, e chan<- Terminatio
 		}
 		e <- t
 	}()
-	p.logger.Info("dummy provider monitoring started")
+	p.logger.Info("dummy provider monitoring started", "provider_name", p.Name())
 }

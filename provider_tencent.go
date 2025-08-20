@@ -42,18 +42,18 @@ func (p *TencentProvider) IsSupported(ctx context.Context) bool {
 
 	_, err := p.doMetadataRequest(ctx, TencentMetaDataHostnameUrl)
 	if err != nil {
-		p.logger.Debug("fail to detect tencent provider", "error", err.Error())
+		p.logger.Debug("fail to detect tencent provider", "error", err.Error(), "provider_name", p.Name())
 		return false
 	}
 
-	p.logger.Info("tencent provider detected")
+	p.logger.Info("tencent provider detected", "provider_name", p.Name())
 	return true
 }
 
 func (p *TencentProvider) StartMonitoring(ctx context.Context, e chan<- TerminationEvent) {
 
 	go p.startMonitoring(ctx, e)
-	p.logger.Info("tencent provider monitoring started")
+	p.logger.Info("tencent provider monitoring started", "provider_name", p.Name())
 }
 
 func (p *TencentProvider) startMonitoring(ctx context.Context, e chan<- TerminationEvent) {
@@ -61,8 +61,8 @@ func (p *TencentProvider) startMonitoring(ctx context.Context, e chan<- Terminat
 	config := GetProviderConfig()
 	interval, err := time.ParseDuration(config.PollInterval)
 	if err != nil {
-		p.logger.Warn("failed to parse poll interval", "error", err.Error())
-		p.logger.Warn("using default interval of 3 seconds")
+		p.logger.Warn("failed to parse poll interval", "error", err.Error(), "provider_name", p.Name())
+		p.logger.Warn("using default interval of 3 seconds", "provider_name", p.Name())
 		interval = 3 * time.Second
 	}
 
@@ -74,26 +74,26 @@ func (p *TencentProvider) startMonitoring(ctx context.Context, e chan<- Terminat
 		case <-ticker.C:
 			// Use mutex to prevent overlapping executions
 			if !p.mu.TryLock() {
-				p.logger.Debug("spot termination check already in progress, skipping")
+				p.logger.Debug("spot termination check already in progress, skipping", "provider_name", p.Name())
 				continue
 			}
 
 			// Check for spot termination
 			terminationDetected, err := p.isSpotTerminationDetected(ctx)
 			if err != nil {
-				p.logger.Error("failed to detect spot termination", "error", err.Error())
+				p.logger.Error("failed to detect spot termination", "error", err.Error(), "provider_name", p.Name())
 				p.mu.Unlock()
 				continue
 			}
 
 			if terminationDetected {
-				p.logger.Info("spot termination detected")
+				p.logger.Info("spot termination detected", "provider_name", p.Name())
 
 				// Handle termination in a separate goroutine but keep the mutex locked
 				// to prevent further ticker executions
 				go func() {
 					defer p.mu.Unlock()
-					p.logger.Info("monitoring will be stopped and continue to handler")
+					p.logger.Info("monitoring will be stopped and continue to handler", "provider_name", p.Name())
 
 					t := p.getInstanceMetadatas(ctx)
 					e <- t
@@ -127,7 +127,7 @@ func (p *TencentProvider) getInstanceMetadatas(ctx context.Context) TerminationE
 
 	// Get hostname - log error but continue
 	if hostname, err := p.doMetadataRequest(ctx, TencentMetaDataHostnameUrl); err != nil {
-		p.logger.Error("failed to get hostname", "error", err.Error())
+		p.logger.Error("failed to get hostname", "error", err.Error(), "provider_name", p.Name())
 		t.Hostname = "unknown"
 	} else {
 		t.Hostname = hostname
@@ -135,7 +135,7 @@ func (p *TencentProvider) getInstanceMetadatas(ctx context.Context) TerminationE
 
 	// Get private IP - log error but continue
 	if privateIP, err := p.doMetadataRequest(ctx, TencentMetaDataLocalIpUrl); err != nil {
-		p.logger.Error("failed to get private IP", "error", err.Error())
+		p.logger.Error("failed to get private IP", "error", err.Error(), "provider_name", p.Name())
 		t.PrivateIP = "unknown"
 	} else {
 		t.PrivateIP = privateIP
@@ -143,7 +143,7 @@ func (p *TencentProvider) getInstanceMetadatas(ctx context.Context) TerminationE
 
 	// Get instance ID - log error but continue
 	if instanceID, err := p.doMetadataRequest(ctx, TencentMetaDataInstanceIdUrl); err != nil {
-		p.logger.Error("failed to get instance ID", "error", err.Error())
+		p.logger.Error("failed to get instance ID", "error", err.Error(), "provider_name", p.Name())
 		t.InstanceID = "unknown"
 	} else {
 		t.InstanceID = instanceID
