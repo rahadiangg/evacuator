@@ -35,6 +35,7 @@ RUN chown appuser:appgroup /app
 
 # Copy the pre-built binary (relative path from build context)
 COPY dist/evacuator evacuator
+RUN chmod +x evacuator
 
 # Change ownership of the binary
 RUN chown appuser:appgroup evacuator
