@@ -81,6 +81,7 @@ func main() {
 	providers := []evacuator.Provider{
 		evacuator.NewAwsProvider(providerHttpClient, logger),
 		evacuator.NewAlicloudProvider(providerHttpClient, logger),
+		evacuator.NewTencentProvider(providerHttpClient, logger),
 	}
 
 	if config.Provider.Dummy.Enabled {
