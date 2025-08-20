@@ -66,19 +66,44 @@ handler:
   ## Set to 75 seconds to ensure completion within 2-minute spot termination window
   ## This allows 33 seconds safety buffer before force-terminates the instance
   processing_timeout: "75s"
+  
+  ## Kubernetes node drain handler - cordons and drains nodes when spot termination detected
+  ## Process: 1) Cordon node (prevent new pods) 2) Evict existing pods 3) Wait for graceful shutdown
   kubernetes:
+    ## Options: true, false
     enabled: false
+    
+    ## Skip DaemonSet pods during drain (like kubectl drain --ignore-daemonsets)
+    ## Options: true, false
     skip_daemon_sets: true
+    
+    ## Delete pods with emptyDir volumes (like kubectl drain --delete-emptydir-data)
+    ## Options: true, false  
     delete_empty_dir_data: false
+    
+    ## Path to kubeconfig file (only used when in_cluster=false)
     kubeconfig: ""
+    
+    ## Use in-cluster service account credentials vs external kubeconfig
+    ## Options: true, false
     in_cluster: true
 
+  ## Telegram notification handler - sends alert messages when spot termination detected
+  ## Sends formatted message with hostname, instance ID, private IP, and termination reason
   telegram:
+    ## Options: true, false
     enabled: false
+    
+    ## Telegram bot token from @BotFather
     bot_token:
+    
+    ## Telegram chat ID (group/channel ID or user ID)
     chat_id:
 
 log:
+  ## Options: debug, info, warn, error
   level: "info"
+  
+  ## Options: json, text
   format: "json"
 
