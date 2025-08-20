@@ -33,8 +33,8 @@ RUN addgroup -g 1001 -S appgroup && \
 WORKDIR /app
 RUN chown appuser:appgroup /app
 
-# Copy the pre-built binary (expected to be in dist/ from CI)
-COPY dist/evacuator .
+# Copy the pre-built binary (relative path from build context)
+COPY dist/evacuator evacuator
 
 # Change ownership of the binary
 RUN chown appuser:appgroup evacuator
