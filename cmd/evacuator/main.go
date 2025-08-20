@@ -166,15 +166,15 @@ func DetectProvider(ctx context.Context, providers []evacuator.Provider, logger 
 		for _, p := range providers {
 			if strings.EqualFold(string(p.Name()), providerConfig.Name) {
 				if p.IsSupported(ctx) {
-					logger.Info("configured provider detected and supported", "provider_name", p.Name())
+					logger.Info("configured provider detected and supported", "provider", p.Name())
 					return p
 				} else {
-					logger.Warn("configured provider not supported in current environment", "provider_name", p.Name())
+					logger.Warn("configured provider not supported in current environment", "provider", p.Name())
 					return nil
 				}
 			}
 		}
-		logger.Error("configured provider not found", "provider_name", providerConfig.Name)
+		logger.Error("configured provider not found", "provider", providerConfig.Name)
 		return nil
 	}
 
@@ -188,7 +188,7 @@ func DetectProvider(ctx context.Context, providers []evacuator.Provider, logger 
 	logger.Info("auto-detecting cloud provider")
 	for _, p := range providers {
 		if p.IsSupported(ctx) {
-			logger.Info("provider auto-detected", "provider_name", p.Name())
+			logger.Info("provider auto-detected", "provider", p.Name())
 			return p
 		}
 	}

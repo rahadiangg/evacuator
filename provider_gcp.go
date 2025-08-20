@@ -42,18 +42,18 @@ func (p *GcpProvider) IsSupported(ctx context.Context) bool {
 
 	_, err := p.doMetadataRequest(ctx, GcpMetaDataHostnameUrl)
 	if err != nil {
-		p.logger.Debug("fail to detect a gcp provider", "error", err.Error(), "provider_name", p.Name())
+		p.logger.Debug("fail to detect a gcp provider", "error", err.Error(), "provider", p.Name())
 		return false
 	}
 
-	p.logger.Info("gcp provider detected", "provider_name", p.Name())
+	p.logger.Info("gcp provider detected", "provider", p.Name())
 	return true
 }
 
 func (p *GcpProvider) StartMonitoring(ctx context.Context, e chan<- TerminationEvent) {
 
 	go p.startMonitoring(ctx, e)
-	p.logger.Info("gcp provider monitoring started", "provider_name", p.Name())
+	p.logger.Info("gcp provider monitoring started", "provider", p.Name())
 }
 
 func (p *GcpProvider) startMonitoring(ctx context.Context, e chan<- TerminationEvent) {
@@ -61,8 +61,8 @@ func (p *GcpProvider) startMonitoring(ctx context.Context, e chan<- TerminationE
 	config := GetProviderConfig()
 	interval, err := time.ParseDuration(config.PollInterval)
 	if err != nil {
-		p.logger.Warn("failed to parse poll interval", "error", err.Error(), "provider_name", p.Name())
-		p.logger.Warn("using default interval of 3 seconds", "provider_name", p.Name())
+		p.logger.Warn("failed to parse poll interval", "error", err.Error(), "provider", p.Name())
+		p.logger.Warn("using default interval of 3 seconds", "provider", p.Name())
 		interval = 3 * time.Second
 	}
 
@@ -74,26 +74,26 @@ func (p *GcpProvider) startMonitoring(ctx context.Context, e chan<- TerminationE
 		case <-ticker.C:
 			// Use mutex to prevent overlapping executions
 			if !p.mu.TryLock() {
-				p.logger.Debug("spot termination check already in progress, skipping", "provider_name", p.Name())
+				p.logger.Debug("spot termination check already in progress, skipping", "provider", p.Name())
 				continue
 			}
 
 			// Check for spot termination
 			terminationDetected, err := p.isSpotTerminationDetected(ctx)
 			if err != nil {
-				p.logger.Error("failed to detect spot termination", "error", err.Error(), "provider_name", p.Name())
+				p.logger.Error("failed to detect spot termination", "error", err.Error(), "provider", p.Name())
 				p.mu.Unlock()
 				continue
 			}
 
 			if terminationDetected {
-				p.logger.Info("spot termination detected", "provider_name", p.Name())
+				p.logger.Info("spot termination detected", "provider", p.Name())
 
 				// Handle termination in a separate goroutine but keep the mutex locked
 				// to prevent further ticker executions
 				go func() {
 					defer p.mu.Unlock()
-					p.logger.Info("monitoring will be stopped and continue to handler", "provider_name", p.Name())
+					p.logger.Info("monitoring will be stopped and continue to handler", "provider", p.Name())
 
 					t := p.getInstanceMetadatas(ctx)
 					e <- t
@@ -120,7 +120,7 @@ func (p *GcpProvider) isSpotTerminationDetected(ctx context.Context) (bool, erro
 	}
 
 	if spotInfo == "FALSE" {
-		p.logger.Debug("no spot termination detected", "provider_name", p.Name())
+		p.logger.Debug("no spot termination detected", "provider", p.Name())
 	}
 
 	return true, nil
@@ -131,7 +131,7 @@ func (p *GcpProvider) getInstanceMetadatas(ctx context.Context) TerminationEvent
 
 	// Get hostname - log error but continue
 	if hostname, err := p.doMetadataRequest(ctx, GcpMetaDataHostnameUrl); err != nil {
-		p.logger.Error("failed to get hostname", "error", err.Error(), "provider_name", p.Name())
+		p.logger.Error("failed to get hostname", "error", err.Error(), "provider", p.Name())
 		t.Hostname = "unknown"
 	} else {
 		t.Hostname = hostname
@@ -139,7 +139,7 @@ func (p *GcpProvider) getInstanceMetadatas(ctx context.Context) TerminationEvent
 
 	// Get private IP - log error but continue
 	if privateIP, err := p.doMetadataRequest(ctx, GcpMetaDataLocalIpUrl); err != nil {
-		p.logger.Error("failed to get private IP", "error", err.Error(), "provider_name", p.Name())
+		p.logger.Error("failed to get private IP", "error", err.Error(), "provider", p.Name())
 		t.PrivateIP = "unknown"
 	} else {
 		t.PrivateIP = privateIP
@@ -147,7 +147,7 @@ func (p *GcpProvider) getInstanceMetadatas(ctx context.Context) TerminationEvent
 
 	// Get instance ID - log error but continue
 	if instanceID, err := p.doMetadataRequest(ctx, GcpMetaDataInstanceIdUrl); err != nil {
-		p.logger.Error("failed to get instance ID", "error", err.Error(), "provider_name", p.Name())
+		p.logger.Error("failed to get instance ID", "error", err.Error(), "provider", p.Name())
 		t.InstanceID = "unknown"
 	} else {
 		t.InstanceID = instanceID
