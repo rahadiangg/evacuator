@@ -27,11 +27,6 @@ type HandlerResult struct {
 // Application configuration constants
 const (
 
-	// Handler processing timeout - time allowed for each handler to process termination event
-	// Set to 75 seconds to ensure completion within 2-minute spot termination window
-	// This allows 33 seconds safety buffer before force-terminates the instance
-	HandlerProcessingTimeout = 75 * time.Second
-
 	// Graceful shutdown timeout - maximum time to wait for goroutines to finish
 	// Reduced to 10 seconds since handlers should already be complete
 	// This is just for final cleanup before termination deadline
@@ -219,7 +214,14 @@ func broadcastTerminationEvents(ctx context.Context, terminationEvent <-chan eva
 
 					// Create context with timeout for handler processing
 					// Uses HandlerProcessingTimeout constant for consistency
-					handlerCtx, cancel := context.WithTimeout(ctx, HandlerProcessingTimeout)
+
+					processingTimeout, err := time.ParseDuration(config.Handler.ProcessingTimeout)
+					if err != nil {
+						logger.Error("failed to parse processing timeout, will use default config", "error", err)
+						processingTimeout = 75 * time.Second
+					}
+
+					handlerCtx, cancel := context.WithTimeout(ctx, processingTimeout)
 					defer cancel()
 
 					logger.Debug("processing termination event with handler", "handler_name", h.Name())
@@ -229,7 +231,7 @@ func broadcastTerminationEvents(ctx context.Context, terminationEvent <-chan eva
 						event.Hostname = config.NodeName
 					}
 
-					err := h.HandleTermination(handlerCtx, event)
+					err = h.HandleTermination(handlerCtx, event)
 					results <- HandlerResult{
 						HandlerName: h.Name(),
 						Error:       err,

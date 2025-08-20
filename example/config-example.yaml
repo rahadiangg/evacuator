@@ -8,16 +8,51 @@
 # 2. Configuration file values
 # 3. Default values
 
-
+## Node name configuration for Kubernetes cluster identification
+## The node name is automatically detected from cloud provider metadata (hostname)
+## but you can specify it manually if needed for the following scenarios:
+## - Custom node naming schemes in Kubernetes clusters
+## - When automatic detection fails or returns incorrect values  
+## - When running in environments with non-standard hostname configurations
+## - For testing purposes with specific node names
+## Leave empty to use automatic detection from cloud provider metadata
 node_name: ""
 
 provider:
+  ## Cloud provider configuration for spot instance termination monitoring
+  ## Supported providers: aws, alicloud, gcp, tencent, dummy
+  ##
+  ## When provider name is specified, auto_detect will be ignored
+  ## Leave empty to use auto-detection
+  ## Examples: "aws", "alicloud", "gcp", "tencent", "dummy"
   name: ""
+  
+  ## Auto-detect cloud provider from instance metadata
+  ## When enabled, evacuator will automatically detect the cloud provider
+  ## by querying instance metadata endpoints
+  ## Set to false if you want to manually specify the provider name
   auto_detect: true
+  
+  ## Poll interval for checking instance metadata endpoints
+  ## How often to check for spot instance termination notices
+  ## Lower values provide faster detection but increase API calls
+  ## Recommended: 3s-10s depending on your requirements
+  ## Format: duration string (e.g., "3s", "30s", "1m")
   poll_interval: "3s"
+  
+  ## Timeout for instance metadata requests
+  ## Maximum time to wait for metadata endpoint responses
+  ## Should be less than poll_interval to avoid overlapping requests
+  ## Recommended: 1s-5s depending on network latency
+  ## Format: duration string (e.g., "2s", "5s")
   request_timeout: "2s"
 
 handler:
+
+  ## Handler processing timeout - time allowed for each handler to process termination event
+  ## Set to 75 seconds to ensure completion within 2-minute spot termination window
+  ## This allows 33 seconds safety buffer before force-terminates the instance
+  processing_timeout: "75s"
   kubernetes:
     enabled: false
     skip_daemon_sets: true

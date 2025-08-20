@@ -15,17 +15,17 @@ type Config struct {
 }
 
 type HandlerConfig struct {
-	Kubernetes KubernetesConfig `mapstructure:"kubernetes"`
-	Telegram   TelegramConfig   `mapstructure:"telegram"`
+	ProcessingTimeout string           `mapstructure:"processing_timeout"`
+	Kubernetes        KubernetesConfig `mapstructure:"kubernetes"`
+	Telegram          TelegramConfig   `mapstructure:"telegram"`
 }
 
 type KubernetesConfig struct {
-	Enabled             bool   `mapstructure:"enabled"`
-	DrainTimeoutSeconds int    `mapstructure:"drain_timeout_seconds"`
-	SkipDaemonSets      bool   `mapstructure:"skip_daemon_sets"`
-	DeleteEmptyDirData  bool   `mapstructure:"delete_empty_dir_data"`
-	Kubeconfig          string `mapstructure:"kubeconfig"`
-	InCluster           bool   `mapstructure:"in_cluster"`
+	Enabled            bool   `mapstructure:"enabled"`
+	SkipDaemonSets     bool   `mapstructure:"skip_daemon_sets"`
+	DeleteEmptyDirData bool   `mapstructure:"delete_empty_dir_data"`
+	Kubeconfig         string `mapstructure:"kubeconfig"`
+	InCluster          bool   `mapstructure:"in_cluster"`
 }
 
 type TelegramConfig struct {
@@ -99,6 +99,7 @@ var configItems = []ConfigItem{
 	{"PROVIDER_REQUEST_TIMEOUT", "provider.request_timeout", "2s"},
 	{"LOG_LEVEL", "log.level", "info"},
 	{"LOG_FORMAT", "log.format", "json"},
+	{"HANDLER_PROCESSING_TIMEOUT", "handler.processing_timeout", "75s"},
 	{"HANDLER_KUBERNETES_ENABLED", "handler.kubernetes.enabled", false},
 	{"HANDLER_KUBERNETES_SKIP_DAEMON_SETS", "handler.kubernetes.skip_daemon_sets", true},
 	{"HANDLER_KUBERNETES_DELETE_EMPTY_DIR_DATA", "handler.kubernetes.delete_empty_dir_data", false},
