@@ -219,7 +219,7 @@ func broadcastTerminationEvents(ctx context.Context, terminationEvent <-chan eva
 					handlerCtx, cancel := context.WithTimeout(ctx, config.Handler.ProcessingTimeout)
 					defer cancel()
 
-					logger.Debug("processing termination event with handler", "handler_name", h.Name())
+					logger.Debug("processing termination event with handler", "handler", h.Name())
 
 					// if node.name configured, use it as hostname
 					if config.NodeName != "" {
@@ -246,12 +246,12 @@ func broadcastTerminationEvents(ctx context.Context, terminationEvent <-chan eva
 			for result := range results {
 				if result.Error != nil {
 					logger.Error("handler failed to process termination event",
-						"handler_name", result.HandlerName,
+						"handler", result.HandlerName,
 						"error", result.Error.Error(),
 						"processed_at", result.ProcessedAt)
 				} else {
 					logger.Info("handler successfully processed termination event",
-						"handler_name", result.HandlerName,
+						"handler", result.HandlerName,
 						"processed_at", result.ProcessedAt)
 					successCount++
 				}
