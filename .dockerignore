@@ -40,7 +40,7 @@ kubeconfig
 tmp/
 temp/
 build/
-dist/
+# dist/ - commented out because we need dist/evacuator for prebuilt Docker stage
 
 # Log files
 *.log

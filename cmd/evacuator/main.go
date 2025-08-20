@@ -2,201 +2,305 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
+	"strings"
+	"sync"
 	"syscall"
+	"time"
 
-	"github.com/rahadiangg/evacuator/pkg/cloud"
-	"github.com/rahadiangg/evacuator/pkg/config"
-	"github.com/rahadiangg/evacuator/pkg/handlers"
-	"github.com/rahadiangg/evacuator/pkg/providers/alibaba"
+	"github.com/rahadiangg/evacuator"
+	"github.com/spf13/viper"
+)
+
+// HandlerResult represents the result of processing a termination event by a handler
+type HandlerResult struct {
+	HandlerName string
+	Error       error
+	ProcessedAt time.Time
+}
+
+// Application configuration constants
+const (
+
+	// Graceful shutdown timeout - maximum time to wait for goroutines to finish
+	// Reduced to 10 seconds since handlers should already be complete
+	// This is just for final cleanup before termination deadline
+	GracefulShutdownTimeout = 10 * time.Second
 )
 
 func main() {
-	// Load configuration using Viper
-	cfg, err := config.LoadConfig()
+	// Parse command-line flags
+	var configPath = flag.String("config", "", "path to config file (optional)")
+	flag.Parse()
+
+	v := viper.New()
+	config, err := evacuator.LoadConfig(*configPath, v)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Failed to load configuration: %v\n", err)
+		fmt.Printf("failed to load config file: %v", err)
 		os.Exit(1)
 	}
 
-	// Setup logger
-	logger := setupLogger(cfg.Log)
+	// Set the global configuration
+	evacuator.SetGlobalConfig(config)
 
-	logger.Info("Starting evacuator",
-		"dry_run", cfg.DryRun,
-	)
-
-	// Create cloud provider registry
-	registry := cloud.NewRegistry()
-
-	// Register cloud providers
-	if err := registerProviders(registry, cfg, logger); err != nil {
-		logger.Error("Failed to register providers", "error", err)
+	logger, err := setupLogger()
+	if err != nil {
+		fmt.Printf("failed to setup logger: %v", err)
 		os.Exit(1)
 	}
 
-	// Create monitoring service for single-node operation (DaemonSet deployment)
-	nodeMonitoringConfig := cloud.NodeMonitoringConfig{
-		NodeName:        cfg.NodeName, // Primary node name from top-level config
-		EventBufferSize: cfg.Monitoring.EventBufferSize,
-		Logger:          logger,
-		Provider:        cfg.Monitoring.Provider,   // Manual provider selection
-		AutoDetect:      cfg.Monitoring.AutoDetect, // Auto-detection fallback
+	// Log the configuration source
+	if *configPath != "" {
+		if v.ConfigFileUsed() != "" {
+			logger.Info("loaded configuration from file", "file", v.ConfigFileUsed())
+		} else {
+			logger.Info("config file specified but not found, using environment variables and defaults", "file", *configPath)
+		}
+	} else {
+		logger.Info("no config file specified, using environment variables and defaults")
 	}
 
-	monitoringService := cloud.NewNodeMonitoringService(registry, nodeMonitoringConfig) // Register event handlers
-	if err := registerEventHandlers(monitoringService, cfg, logger); err != nil {
-		logger.Error("Failed to register event handlers", "error", err)
+	// Create default HTTP client with reasonable timeout
+	providerHttpClient := &http.Client{
+		Timeout: config.Provider.RequestTimeout,
+	}
+
+	dummyDetectionWait, err := time.ParseDuration(config.Provider.Dummy.DetectionWait)
+	if err != nil {
+		logger.Error("failed to parse dummy provider detection wait time", "error", err)
 		os.Exit(1)
 	}
 
-	// Start the application
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	// Register all available providers
+	providers := []evacuator.Provider{
+		evacuator.NewAwsProvider(providerHttpClient, logger),
+		evacuator.NewAlicloudProvider(providerHttpClient, logger),
+		evacuator.NewTencentProvider(providerHttpClient, logger),
+		evacuator.NewGcpProvider(providerHttpClient, logger),
+	}
 
-	// Start monitoring
-	if err := monitoringService.Start(ctx); err != nil {
-		logger.Error("Failed to start monitoring service", "error", err)
+	if config.Provider.Dummy.Enabled {
+		providers = append(providers, evacuator.NewDummyProvider(logger, dummyDetectionWait))
+	}
+
+	// Register all configured handlers
+	handlerRegistry := evacuator.NewHandlerRegistry(logger)
+	handlers, err := handlerRegistry.RegisterHandlers()
+	if err != nil {
+		logger.Error("failed to register handlers", "error", err)
 		os.Exit(1)
 	}
 
-	logger.Info("Evacuator started successfully",
-		"current_provider", monitoringService.GetCurrentProvider(),
-		"node_name", monitoringService.GetNodeName(),
-	)
+	// Create root context for coordinated shutdown
+	rootCtx, rootCancel := context.WithCancel(context.Background())
+	defer rootCancel()
 
-	// TODO: Start metrics server
-	// TODO: Start health check server
+	// Detect the current cloud provider environment
+	provider := DetectProvider(rootCtx, providers, logger)
+	if provider == nil {
+		logger.Error("no supported provider detected")
+		os.Exit(1)
+	}
 
-	// Wait for termination signal
-	sigChan := make(chan os.Signal, 1)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	// Create channel for termination events from provider
+	terminationEvent := make(chan evacuator.TerminationEvent)
+	var wg sync.WaitGroup
 
+	// Start provider monitoring in background goroutine
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		provider.StartMonitoring(rootCtx, terminationEvent)
+	}()
+
+	// Setup signal handling for graceful shutdown
+	shutdownSignal := make(chan os.Signal, 1)
+	signal.Notify(shutdownSignal, syscall.SIGINT, syscall.SIGTERM)
+
+	// Start event broadcaster to distribute events to all handlers
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		broadcastTerminationEvents(rootCtx, terminationEvent, handlers, logger)
+	}()
+
+	// Wait for shutdown signal (SIGINT or SIGTERM)
+	<-shutdownSignal
+	logger.Info("shutdown signal received, stopping gracefully...")
+
+	// Cancel context to signal all goroutines to stop
+	rootCancel()
+
+	// Wait for all goroutines to finish with timeout protection
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	// Either all goroutines finish or timeout after configured duration
 	select {
-	case sig := <-sigChan:
-		logger.Info("Received termination signal", "signal", sig)
-	case <-ctx.Done():
-		logger.Info("Context cancelled")
+	case <-done:
+		logger.Info("all goroutines stopped successfully")
+	case <-time.After(GracefulShutdownTimeout):
+		logger.Warn("timeout waiting for goroutines to stop")
 	}
 
-	// Graceful shutdown
-	logger.Info("Shutting down evacuator...")
-
-	if err := monitoringService.Stop(); err != nil {
-		logger.Error("Error stopping monitoring service", "error", err)
-	}
-
-	// TODO: Stop metrics server
-	// TODO: Stop health check server
-
-	logger.Info("Evacuator stopped")
+	logger.Info("shutdown complete")
 }
 
-// setupLogger configures the logger based on configuration
-func setupLogger(cfg config.LoggingConfig) *slog.Logger {
-	var level slog.Level
-	switch cfg.Level {
+// DetectProvider automatically detects which cloud provider is currently running.
+// It first checks if a specific provider is configured, then falls back to auto-detection
+// if auto_detect is enabled. Uses global configuration.
+func DetectProvider(ctx context.Context, providers []evacuator.Provider, logger *slog.Logger) evacuator.Provider {
+	providerConfig := evacuator.GetProviderConfig()
+
+	// when specified provider configured use it
+	if providerConfig.Name != "" {
+		for _, p := range providers {
+			if strings.EqualFold(string(p.Name()), providerConfig.Name) {
+				if p.IsSupported(ctx) {
+					logger.Info("configured provider detected and supported", "provider", p.Name())
+					return p
+				} else {
+					logger.Warn("configured provider not supported in current environment", "provider", p.Name())
+					return nil
+				}
+			}
+		}
+		logger.Error("configured provider not found", "provider", providerConfig.Name)
+		return nil
+	}
+
+	// If auto-detection is disabled and no provider is specified, return nil
+	if !providerConfig.AutoDetect {
+		logger.Error("auto-detection disabled and no provider specified")
+		return nil
+	}
+
+	// Auto-detect provider
+	logger.Info("auto-detecting cloud provider")
+	for _, p := range providers {
+		if p.IsSupported(ctx) {
+			logger.Info("provider auto-detected", "provider", p.Name())
+			return p
+		}
+	}
+
+	logger.Debug("no supported provider detected during auto-detection")
+	return nil
+}
+
+// broadcastTerminationEvents distributes termination events to all handlers.
+// This function processes each event through all handlers sequentially and collects results.
+func broadcastTerminationEvents(ctx context.Context, terminationEvent <-chan evacuator.TerminationEvent, handlers []evacuator.Handler, logger *slog.Logger) {
+
+	config := evacuator.GetGlobalConfig()
+
+	for {
+		select {
+		case event := <-terminationEvent:
+			logger.Info("termination event received, processing through all handlers")
+
+			// Process event through all handlers and collect results
+			var handlerWg sync.WaitGroup
+			results := make(chan HandlerResult, len(handlers))
+
+			for _, handler := range handlers {
+				handlerWg.Add(1)
+				go func(h evacuator.Handler) {
+					defer handlerWg.Done()
+
+					handlerCtx, cancel := context.WithTimeout(ctx, config.Handler.ProcessingTimeout)
+					defer cancel()
+
+					logger.Debug("processing termination event with handler", "handler", h.Name())
+
+					// if node.name configured, use it as hostname
+					if config.NodeName != "" {
+						event.Hostname = config.NodeName
+					}
+
+					err := h.HandleTermination(handlerCtx, event)
+					results <- HandlerResult{
+						HandlerName: h.Name(),
+						Error:       err,
+						ProcessedAt: time.Now(),
+					}
+				}(handler)
+			}
+
+			// Wait for all handlers to complete and collect results
+			go func() {
+				handlerWg.Wait()
+				close(results)
+			}()
+
+			// Process results
+			successCount := 0
+			for result := range results {
+				if result.Error != nil {
+					logger.Error("handler failed to process termination event",
+						"handler", result.HandlerName,
+						"error", result.Error.Error(),
+						"processed_at", result.ProcessedAt)
+				} else {
+					logger.Info("handler successfully processed termination event",
+						"handler", result.HandlerName,
+						"processed_at", result.ProcessedAt)
+					successCount++
+				}
+			}
+
+			logger.Info("termination event processing completed",
+				"total_handlers", len(handlers),
+				"successful_handlers", successCount,
+				"failed_handlers", len(handlers)-successCount)
+
+		case <-ctx.Done():
+			logger.Debug("termination event broadcaster stopping")
+			return
+		}
+	}
+}
+
+func setupLogger() (*slog.Logger, error) {
+	var logLeveler slog.Level
+
+	config := evacuator.GetLogConfig()
+
+	switch config.Level {
 	case "debug":
-		level = slog.LevelDebug
+		logLeveler = slog.LevelDebug
 	case "info":
-		level = slog.LevelInfo
+		logLeveler = slog.LevelInfo
 	case "warn":
-		level = slog.LevelWarn
+		logLeveler = slog.LevelWarn
 	case "error":
-		level = slog.LevelError
+		logLeveler = slog.LevelError
 	default:
-		level = slog.LevelInfo
+		return nil, fmt.Errorf("invalid log level: %s", config.Level)
 	}
 
-	opts := &slog.HandlerOptions{
-		Level: level,
+	// Create default logger with text output to stdout
+	logOpts := slog.HandlerOptions{
+		Level: logLeveler,
 	}
 
-	var handler slog.Handler
-	switch cfg.Format {
-	case "json":
-		handler = slog.NewJSONHandler(os.Stdout, opts)
+	var logger *slog.Logger
+	switch config.Format {
 	case "text":
-		handler = slog.NewTextHandler(os.Stdout, opts)
+		logger = slog.New(slog.NewTextHandler(os.Stdout, &logOpts))
+	case "json":
+		logger = slog.New(slog.NewJSONHandler(os.Stdout, &logOpts))
 	default:
-		handler = slog.NewJSONHandler(os.Stdout, opts)
+		return nil, fmt.Errorf("invalid log format: %s", config.Format)
 	}
 
-	return slog.New(handler)
-}
-
-// registerProviders registers all cloud providers
-func registerProviders(registry *cloud.Registry, cfg *config.Config, logger *slog.Logger) error {
-
-	// Create provider configuration using monitoring settings
-	providerConfig := &cloud.ProviderConfig{
-		PollInterval:    cfg.Monitoring.PollInterval,
-		Timeout:         cfg.Monitoring.ProviderTimeout,
-		EventBufferSize: cfg.Monitoring.EventBufferSize,
-	}
-
-	// Register Alibaba Cloud provider
-	alibabaProvider := alibaba.NewProvider(providerConfig)
-	if err := registry.RegisterProvider(alibabaProvider); err != nil {
-		return fmt.Errorf("failed to register Alibaba Cloud provider: %w", err)
-	}
-	logger.Info("Registered Alibaba Cloud provider", "poll_interval", cfg.Monitoring.PollInterval)
-
-	return nil
-}
-
-// registerEventHandlers registers all event handlers
-func registerEventHandlers(service *cloud.NodeMonitoringService, cfg *config.Config, logger *slog.Logger) error {
-	// Register log handler
-	if cfg.Handlers.Log.Enabled {
-		logHandler := handlers.NewLogHandler(logger)
-		service.AddEventHandler(logHandler)
-		logger.Info("Registered log handler")
-	}
-
-	// Register Kubernetes handler
-	if cfg.Handlers.Kubernetes.Enabled {
-		k8sConfig := handlers.KubernetesConfig{
-			KubeConfig:          cfg.Handlers.Kubernetes.KubeConfig,
-			InCluster:           cfg.Handlers.Kubernetes.InCluster,
-			NodeName:            service.GetNodeName(), // Use the node name from monitoring service
-			DrainTimeoutSeconds: cfg.Handlers.Kubernetes.DrainTimeoutSeconds,
-			ForceEvictionAfter:  cfg.Handlers.Kubernetes.ForceEvictionAfter,
-			SkipDaemonSets:      cfg.Handlers.Kubernetes.SkipDaemonSets,
-			DeleteEmptyDirData:  cfg.Handlers.Kubernetes.DeleteEmptyDirData,
-			IgnorePodDisruption: cfg.Handlers.Kubernetes.IgnorePodDisruption,
-			GracePeriodSeconds:  cfg.Handlers.Kubernetes.GracePeriodSeconds,
-			Logger:              logger,
-		}
-
-		k8sHandler, err := handlers.NewKubernetesHandler(k8sConfig)
-		if err != nil {
-			return fmt.Errorf("failed to create Kubernetes handler: %w", err)
-		}
-		service.AddEventHandler(k8sHandler)
-		logger.Info("Registered Kubernetes handler")
-	}
-
-	// Register Telegram handler
-	if cfg.Handlers.Telegram.Enabled {
-		telegramConfig := handlers.TelegramConfig{
-			BotToken: cfg.Handlers.Telegram.BotToken,
-			ChatID:   cfg.Handlers.Telegram.ChatID,
-			Timeout:  cfg.Handlers.Telegram.Timeout,
-			SendRaw:  cfg.Handlers.Telegram.SendRaw,
-			Logger:   logger,
-		}
-
-		telegramHandler, err := handlers.NewTelegramHandler(telegramConfig)
-		if err != nil {
-			return fmt.Errorf("failed to create Telegram handler: %w", err)
-		}
-		service.AddEventHandler(telegramHandler)
-		logger.Info("Registered Telegram handler", "chat_id", cfg.Handlers.Telegram.ChatID)
-	}
-
-	return nil
+	return logger, nil
 }
