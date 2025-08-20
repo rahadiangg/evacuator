@@ -44,15 +44,9 @@ func (h *TelegramHandler) Name() string {
 func (h *TelegramHandler) HandleTermination(ctx context.Context, event TerminationEvent) error {
 	// Validate termination event first
 	if err := h.validateTerminationEvent(event); err != nil {
-		h.logger.Error("invalid termination event received", "error", err.Error())
+		h.logger.Error("invalid termination event received", "error", err.Error(), "handler", h.Name())
 		return err
 	}
-
-	h.logger.Info("telegram handler processing termination event",
-		"hostname", event.Hostname,
-		"instance_id", event.InstanceID,
-		"private_ip", event.PrivateIP,
-		"reason", event.Reason)
 
 	// Format the message
 	message := fmt.Sprintf(`🚨 *Node Termination Alert*
@@ -77,11 +71,11 @@ Node evacuation process has been initiated\.`,
 	})
 
 	if err != nil {
-		h.logger.Error("failed to send telegram message", "error", err.Error())
+		h.logger.Error("failed to send telegram message", "error", err.Error(), "handler", h.Name())
 		return fmt.Errorf("failed to send telegram notification: %w", err)
 	}
 
-	h.logger.Info("termination event processed successfully via telegram")
+	h.logger.Info("termination event processed successfully", "handler", h.Name())
 	return nil
 }
 

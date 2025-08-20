@@ -68,7 +68,7 @@ func (h *KubernetesHandler) Name() string {
 }
 
 func (h *KubernetesHandler) HandleTermination(ctx context.Context, event TerminationEvent) error {
-	h.logger.Info("handling kubernetes node termination", "node", event.Hostname)
+	h.logger.Info("handling kubernetes node termination", "node", event.Hostname, "handler", h.Name())
 
 	// check if kubernetes node is exist
 	_, err := h.RestConfig.CoreV1().Nodes().Get(ctx, event.Hostname, v1.GetOptions{})
@@ -76,7 +76,7 @@ func (h *KubernetesHandler) HandleTermination(ctx context.Context, event Termina
 		return fmt.Errorf("failed to get kubernetes node: %s", err)
 	}
 
-	h.logger.Info("kubernetes node found, proceeding with cordon", "node", event.Hostname)
+	h.logger.Info("kubernetes node found, proceeding with cordon", "node", event.Hostname, "handler", h.Name())
 
 	// cordon the node
 	_, err = h.RestConfig.CoreV1().Nodes().Patch(ctx, event.Hostname, types.MergePatchType, []byte(`{"spec":{"unschedulable":true}}`), v1.PatchOptions{})
@@ -84,7 +84,7 @@ func (h *KubernetesHandler) HandleTermination(ctx context.Context, event Termina
 		return fmt.Errorf("failed to cordon kubernetes node: %s", err)
 	}
 
-	h.logger.Info("kubernetes node successfully cordoned", "node", event.Hostname)
+	h.logger.Info("kubernetes node successfully cordoned", "node", event.Hostname, "handler", h.Name())
 
 	// drain the node
 	// same like `kubectl drain nodes xxxx --ignore-daemonsets --delete-emptydir-data`
@@ -93,13 +93,13 @@ func (h *KubernetesHandler) HandleTermination(ctx context.Context, event Termina
 		return fmt.Errorf("failed to drain kubernetes node: %s", err)
 	}
 
-	h.logger.Info("kubernetes node termination handling completed successfully", "node", event.Hostname)
+	h.logger.Info("kubernetes node termination handling completed successfully", "node", event.Hostname, "handler", h.Name())
 	return nil
 }
 
 // drainNode drains a Kubernetes node by evicting all pods except DaemonSet pods
 func (h *KubernetesHandler) drainNode(ctx context.Context, nodeName string) error {
-	h.logger.Info("starting node drain", "node", nodeName)
+	h.logger.Info("starting node drain", "node", nodeName, "handler", h.Name())
 
 	// Get all pods on the node
 	fieldSelector := fields.OneTermEqualSelector("spec.nodeName", nodeName).String()
@@ -110,7 +110,7 @@ func (h *KubernetesHandler) drainNode(ctx context.Context, nodeName string) erro
 		return fmt.Errorf("failed to list pods on node %s: %w", nodeName, err)
 	}
 
-	h.logger.Info("found pods on node", "node", nodeName, "total_pods", len(pods.Items))
+	h.logger.Info("found pods on node", "node", nodeName, "total_pods", len(pods.Items), "handler", h.Name())
 
 	var podsToEvict []corev1.Pod
 	var skippedPods = make(map[string]int)
@@ -132,14 +132,14 @@ func (h *KubernetesHandler) drainNode(ctx context.Context, nodeName string) erro
 		// Skip DaemonSet pods (--ignore-daemonsets behavior)
 		if h.isDaemonSetPod(&pod) {
 			skippedPods["daemonset"]++
-			h.logger.Debug("skipping DaemonSet pod", "pod", pod.Name, "namespace", pod.Namespace)
+			h.logger.Debug("skipping DaemonSet pod", "pod", pod.Name, "namespace", pod.Namespace, "handler", h.Name())
 			continue
 		}
 
 		// Skip static pods (managed by kubelet directly)
 		if h.isStaticPod(&pod) {
 			skippedPods["static"]++
-			h.logger.Debug("skipping static pod", "pod", pod.Name, "namespace", pod.Namespace)
+			h.logger.Debug("skipping static pod", "pod", pod.Name, "namespace", pod.Namespace, "handler", h.Name())
 			continue
 		}
 
@@ -153,10 +153,11 @@ func (h *KubernetesHandler) drainNode(ctx context.Context, nodeName string) erro
 		"skipped_terminating", skippedPods["terminating"],
 		"skipped_completed", skippedPods["completed"],
 		"skipped_daemonset", skippedPods["daemonset"],
-		"skipped_static", skippedPods["static"])
+		"skipped_static", skippedPods["static"],
+		"handler", h.Name())
 
 	if len(podsToEvict) == 0 {
-		h.logger.Info("no pods to evict", "node", nodeName)
+		h.logger.Info("no pods to evict", "node", nodeName, "handler", h.Name())
 		return nil
 	}
 
@@ -166,7 +167,7 @@ func (h *KubernetesHandler) drainNode(ctx context.Context, nodeName string) erro
 
 // evictPodsInParallel evicts multiple pods in parallel and waits for all to complete
 func (h *KubernetesHandler) evictPodsInParallel(ctx context.Context, podsToEvict []corev1.Pod, nodeName string) error {
-	h.logger.Info("starting parallel pod eviction", "node", nodeName, "pod_count", len(podsToEvict))
+	h.logger.Info("starting parallel pod eviction", "node", nodeName, "pod_count", len(podsToEvict), "handler", h.Name())
 
 	// Use sync package for coordination
 	var wg sync.WaitGroup
@@ -199,13 +200,14 @@ func (h *KubernetesHandler) evictPodsInParallel(ctx context.Context, podsToEvict
 		"node", nodeName,
 		"total_pods", len(podsToEvict),
 		"successful_evictions", successCount,
-		"failed_evictions", len(evictionErrors))
+		"failed_evictions", len(evictionErrors),
+		"handler", h.Name())
 
 	// If we have any errors, log them but don't fail the entire operation
 	// In emergency situations, partial success is better than total failure
 	if len(evictionErrors) > 0 {
 		for _, err := range evictionErrors {
-			h.logger.Error("pod eviction error", "error", err)
+			h.logger.Error("pod eviction error", "error", err, "handler", h.Name())
 		}
 
 		// Only fail if more than half the pods failed to evict
@@ -214,7 +216,7 @@ func (h *KubernetesHandler) evictPodsInParallel(ctx context.Context, podsToEvict
 		}
 	}
 
-	h.logger.Info("node drain completed successfully", "node", nodeName, "evicted_pods", successCount)
+	h.logger.Info("node drain completed successfully", "node", nodeName, "evicted_pods", successCount, "handler", h.Name())
 	return nil
 }
 
@@ -247,7 +249,8 @@ func (h *KubernetesHandler) evictPod(ctx context.Context, pod *corev1.Pod) error
 	h.logger.Info("evicting pod",
 		"pod", pod.Name,
 		"namespace", pod.Namespace,
-		"node", pod.Spec.NodeName)
+		"node", pod.Spec.NodeName,
+		"handler", h.Name())
 
 	eviction := &policyv1.Eviction{
 		ObjectMeta: v1.ObjectMeta{
@@ -262,13 +265,15 @@ func (h *KubernetesHandler) evictPod(ctx context.Context, pod *corev1.Pod) error
 		h.logger.Error("pod eviction failed",
 			"pod", pod.Name,
 			"namespace", pod.Namespace,
-			"error", err)
+			"error", err,
+			"handler", h.Name())
 		return fmt.Errorf("eviction failed: %w", err)
 	}
 
 	h.logger.Debug("pod eviction request sent, waiting for deletion",
 		"pod", pod.Name,
-		"namespace", pod.Namespace)
+		"namespace", pod.Namespace,
+		"handler", h.Name())
 
 	// Use a much shorter timeout for emergency drain situations
 	// 5 seconds should be enough for most pods to start terminating
@@ -284,7 +289,8 @@ func (h *KubernetesHandler) evictPod(ctx context.Context, pod *corev1.Pod) error
 			h.logger.Warn("timeout waiting for pod deletion, pod may still be terminating",
 				"pod", pod.Name,
 				"namespace", pod.Namespace,
-				"timeout", "5s")
+				"timeout", "5s",
+				"handler", h.Name())
 			// Don't return error - pod might still be terminating gracefully
 			// This allows the drain to continue with other pods
 			return nil
@@ -294,13 +300,15 @@ func (h *KubernetesHandler) evictPod(ctx context.Context, pod *corev1.Pod) error
 				// Pod is deleted (not found error is expected)
 				h.logger.Info("pod successfully evicted and deleted",
 					"pod", pod.Name,
-					"namespace", pod.Namespace)
+					"namespace", pod.Namespace,
+					"handler", h.Name())
 				return nil
 			}
 		case <-ctx.Done():
 			h.logger.Error("context cancelled while waiting for pod deletion",
 				"pod", pod.Name,
-				"namespace", pod.Namespace)
+				"namespace", pod.Namespace,
+				"handler", h.Name())
 			return ctx.Err()
 		}
 	}

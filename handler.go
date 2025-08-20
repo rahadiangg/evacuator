@@ -20,6 +20,14 @@ const (
 	TerminationReasonMaintenance TerminationReason = "maintenance termination"
 )
 
+type HandlerName string
+
+const (
+	HandlerNameLog        HandlerName = "log"
+	HandlerNameKubernetes HandlerName = "kubernetes"
+	HandlerNameTelegram   HandlerName = "telegram"
+)
+
 type Handler interface {
 	// Process a single termination event and return any error
 	HandleTermination(ctx context.Context, event TerminationEvent) error
