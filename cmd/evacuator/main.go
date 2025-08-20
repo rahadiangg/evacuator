@@ -45,14 +45,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Set the global configuration
+	evacuator.SetGlobalConfig(config)
+
 	logger, err := setupLogger()
 	if err != nil {
 		fmt.Printf("failed to setup logger: %v", err)
 		os.Exit(1)
 	}
-
-	// Set the global configuration
-	evacuator.SetGlobalConfig(config)
 
 	// Log the configuration source
 	if *configPath != "" {
