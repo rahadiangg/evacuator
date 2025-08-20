@@ -45,7 +45,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	logger := setupLogger()
+	logger, err := setupLogger()
+	if err != nil {
+		fmt.Printf("failed to setup logger: %v", err)
+		os.Exit(1)
+	}
 
 	// Set the global configuration
 	evacuator.SetGlobalConfig(config)
@@ -279,7 +283,7 @@ func broadcastTerminationEvents(ctx context.Context, terminationEvent <-chan eva
 	}
 }
 
-func setupLogger() *slog.Logger {
+func setupLogger() (*slog.Logger, error) {
 	var logLeveler slog.Level
 
 	config := evacuator.GetLogConfig()
@@ -294,7 +298,7 @@ func setupLogger() *slog.Logger {
 	case "error":
 		logLeveler = slog.LevelError
 	default:
-		logLeveler = slog.LevelInfo
+		return nil, fmt.Errorf("invalid log level: %s", config.Level)
 	}
 
 	// Create default logger with text output to stdout
@@ -309,8 +313,8 @@ func setupLogger() *slog.Logger {
 	case "json":
 		logger = slog.New(slog.NewJSONHandler(os.Stdout, &logOpts))
 	default:
-		logger = slog.New(slog.NewTextHandler(os.Stdout, &logOpts))
+		return nil, fmt.Errorf("invalid log format: %s", config.Format)
 	}
 
-	return logger
+	return logger, nil
 }
