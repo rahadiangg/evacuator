@@ -200,6 +200,9 @@ func DetectProvider(ctx context.Context, providers []evacuator.Provider, logger 
 // broadcastTerminationEvents distributes termination events to all handlers.
 // This function processes each event through all handlers sequentially and collects results.
 func broadcastTerminationEvents(ctx context.Context, terminationEvent <-chan evacuator.TerminationEvent, handlers []evacuator.Handler, logger *slog.Logger) {
+
+	config := evacuator.GetGlobalConfig()
+
 	for {
 		select {
 		case event := <-terminationEvent:
@@ -220,6 +223,11 @@ func broadcastTerminationEvents(ctx context.Context, terminationEvent <-chan eva
 					defer cancel()
 
 					logger.Debug("processing termination event with handler", "handler_name", h.Name())
+
+					// if node.name configured, use it as hostname
+					if config.NodeName != "" {
+						event.Hostname = config.NodeName
+					}
 
 					err := h.HandleTermination(handlerCtx, event)
 					results <- HandlerResult{

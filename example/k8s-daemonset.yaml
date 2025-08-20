@@ -41,19 +41,6 @@ subjects:
   name: evacuator
   namespace: kube-system
 ---
-# Optional: Create this secret to enable Telegram notifications
-# Replace with your actual bot token and chat ID
-# apiVersion: v1
-# kind: Secret
-# metadata:
-#   name: evacuator-telegram
-#   namespace: kube-system
-# type: Opaque
-# data:
-#   # Base64 encoded values - use: echo -n "your-value" | base64
-#   bot-token: Ym90MTIzNDU2OkFCQy1ERUYxMjM0Z2hJa2wtenhONTdXMnYxdTEyM2V3MTE=
-#   chat-id: LTEwMDEyMzQ1Njc4OQ==
----
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -61,41 +48,30 @@ metadata:
   namespace: kube-system
 data:
   config.yaml: |
-    dry_run: false
-    node_name: ""    # Auto-detected from NODE_NAME env var or cloud provider
+    node_name: ""
 
-    monitoring:
-      provider: ""              # Manually specify cloud provider: alibaba (ALWAYS takes priority)
-      auto_detect: true         # Auto-detect when provider is empty (ignored when provider is set)
-      event_buffer_size: 100    # Buffer size for termination event channels
-      poll_interval: "5s"       # How often to check for spot termination events (3s-30s, default: 5s)
-      provider_timeout: "3s"    # Timeout for cloud provider API calls (default: 3s)
+    provider:
+      name: ""
+      auto_detect: true
+      poll_interval: "3s"
+      request_timeout: "2s"
 
-    handlers:
-      log:
-        enabled: true
-      
+    handler:
       kubernetes:
-        enabled: false
-        drain_timeout_seconds: 90      # 1.5 minutes - suitable for 2-minute spot termination notice
-        force_eviction_after: "90s"    # Force evict pods after 1.5 minutes
+        enabled: true
         skip_daemon_sets: true
-        delete_empty_dir_data: false
-        ignore_pod_disruption: true    # Ignore PDBs during emergency evacuation
-        grace_period_seconds: 10       # Shorter grace period for faster evacuation
-        kubeconfig: ""                 # Path to kubeconfig file (empty for default locations)
-        in_cluster: true               # Use in-cluster configuration when running as DaemonSet
-      
+        delete_empty_dir_data: true
+        kubeconfig: ""
+        in_cluster: true
+
       telegram:
-        enabled: true               # Disabled by default, requires manual configuration
-        bot_token: "8296936609:AAHI3rNDPtyqvho-S0onOfkYydFPruFCJDU"               # Telegram bot token (get from @BotFather)
-        chat_id: "381459937"                 # Chat ID where to send notifications
-        timeout: "2s"              # HTTP request timeout for Telegram API
-        send_raw: true             # Send raw event data in addition to formatted message
+        enabled: false
+        bot_token: 
+        chat_id: 
 
     log:
-      level: "info"        # debug, info, warn, error
-      format: "json"       # json, text
+      level: "debug"
+      format: "text"
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -118,16 +94,15 @@ spec:
       dnsPolicy: ClusterFirstWithHostNet
       containers:
       - name: evacuator
-        image: rahadiangg/evacuator:latest
+        image: rahadiangg/evacuator-nightly:nightly
+        args: ["./evacuator", "-config=/etc/evacuator/config.yaml"]
         imagePullPolicy: Always
         env:
-        # Pass the node name to the pod so it knows which node it's monitoring
+        #Pass the node name to the pod so it knows which node it's monitoring
         - name: NODE_NAME
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        - name: CONFIG_FILE
-          value: "/etc/evacuator/config.yaml"
         resources:
           requests:
             cpu: 100m
@@ -139,30 +114,7 @@ spec:
         - name: config
           mountPath: /etc/evacuator
           readOnly: true
-        securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          runAsNonRoot: true
-          runAsUser: 1000
-          capabilities:
-            drop:
-            - ALL
       volumes:
       - name: config
         configMap:
           name: evacuator-config
-      tolerations:
-      # Allow scheduling on all nodes, including spot instances
-      - operator: Exists
-      # Ensure the pod can run on nodes that are being drained
-      - key: node.kubernetes.io/unschedulable
-        operator: Exists
-        effect: NoSchedule
-      # Allow running on spot instances
-      - key: node.kubernetes.io/spot
-        operator: Exists
-        effect: NoSchedule
-      # Allow running on preemptible instances (GCP)
-      - key: cloud.google.com/gke-preemptible
-        operator: Exists
-        effect: NoSchedule
