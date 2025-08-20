@@ -68,7 +68,7 @@ func (h *KubernetesHandler) Name() string {
 }
 
 func (h *KubernetesHandler) HandleTermination(ctx context.Context, event TerminationEvent) error {
-	h.logger.Info("handling Kubernetes node termination", "node", event.Hostname)
+	h.logger.Info("handling kubernetes node termination", "node", event.Hostname)
 
 	// check if kubernetes node is exist
 	_, err := h.RestConfig.CoreV1().Nodes().Get(ctx, event.Hostname, v1.GetOptions{})
@@ -76,7 +76,7 @@ func (h *KubernetesHandler) HandleTermination(ctx context.Context, event Termina
 		return fmt.Errorf("failed to get kubernetes node: %s", err)
 	}
 
-	h.logger.Info("Kubernetes node found, proceeding with cordon", "node", event.Hostname)
+	h.logger.Info("kubernetes node found, proceeding with cordon", "node", event.Hostname)
 
 	// cordon the node
 	_, err = h.RestConfig.CoreV1().Nodes().Patch(ctx, event.Hostname, types.MergePatchType, []byte(`{"spec":{"unschedulable":true}}`), v1.PatchOptions{})
@@ -84,7 +84,7 @@ func (h *KubernetesHandler) HandleTermination(ctx context.Context, event Termina
 		return fmt.Errorf("failed to cordon kubernetes node: %s", err)
 	}
 
-	h.logger.Info("Kubernetes node successfully cordoned", "node", event.Hostname)
+	h.logger.Info("kubernetes node successfully cordoned", "node", event.Hostname)
 
 	// drain the node
 	// same like `kubectl drain nodes xxxx --ignore-daemonsets --delete-emptydir-data`
@@ -93,13 +93,13 @@ func (h *KubernetesHandler) HandleTermination(ctx context.Context, event Termina
 		return fmt.Errorf("failed to drain kubernetes node: %s", err)
 	}
 
-	h.logger.Info("Kubernetes node termination handling completed successfully", "node", event.Hostname)
+	h.logger.Info("kubernetes node termination handling completed successfully", "node", event.Hostname)
 	return nil
 }
 
 // drainNode drains a Kubernetes node by evicting all pods except DaemonSet pods
 func (h *KubernetesHandler) drainNode(ctx context.Context, nodeName string) error {
-	h.logger.Info("Starting node drain", "node", nodeName)
+	h.logger.Info("starting node drain", "node", nodeName)
 
 	// Get all pods on the node
 	fieldSelector := fields.OneTermEqualSelector("spec.nodeName", nodeName).String()
@@ -132,14 +132,14 @@ func (h *KubernetesHandler) drainNode(ctx context.Context, nodeName string) erro
 		// Skip DaemonSet pods (--ignore-daemonsets behavior)
 		if h.isDaemonSetPod(&pod) {
 			skippedPods["daemonset"]++
-			h.logger.Debug("Skipping DaemonSet pod", "pod", pod.Name, "namespace", pod.Namespace)
+			h.logger.Debug("skipping DaemonSet pod", "pod", pod.Name, "namespace", pod.Namespace)
 			continue
 		}
 
 		// Skip static pods (managed by kubelet directly)
 		if h.isStaticPod(&pod) {
 			skippedPods["static"]++
-			h.logger.Debug("Skipping static pod", "pod", pod.Name, "namespace", pod.Namespace)
+			h.logger.Debug("skipping static pod", "pod", pod.Name, "namespace", pod.Namespace)
 			continue
 		}
 
@@ -147,7 +147,7 @@ func (h *KubernetesHandler) drainNode(ctx context.Context, nodeName string) erro
 	}
 
 	// Log summary of pods found
-	h.logger.Info("Pod eviction summary",
+	h.logger.Info("pod eviction summary",
 		"node", nodeName,
 		"pods_to_evict", len(podsToEvict),
 		"skipped_terminating", skippedPods["terminating"],
@@ -156,7 +156,7 @@ func (h *KubernetesHandler) drainNode(ctx context.Context, nodeName string) erro
 		"skipped_static", skippedPods["static"])
 
 	if len(podsToEvict) == 0 {
-		h.logger.Info("No pods to evict", "node", nodeName)
+		h.logger.Info("no pods to evict", "node", nodeName)
 		return nil
 	}
 
@@ -166,7 +166,7 @@ func (h *KubernetesHandler) drainNode(ctx context.Context, nodeName string) erro
 
 // evictPodsInParallel evicts multiple pods in parallel and waits for all to complete
 func (h *KubernetesHandler) evictPodsInParallel(ctx context.Context, podsToEvict []corev1.Pod, nodeName string) error {
-	h.logger.Info("Starting parallel pod eviction", "node", nodeName, "pod_count", len(podsToEvict))
+	h.logger.Info("starting parallel pod eviction", "node", nodeName, "pod_count", len(podsToEvict))
 
 	// Use sync package for coordination
 	var wg sync.WaitGroup
@@ -195,7 +195,7 @@ func (h *KubernetesHandler) evictPodsInParallel(ctx context.Context, podsToEvict
 	// Wait for all evictions to complete
 	wg.Wait()
 
-	h.logger.Info("Parallel pod eviction completed",
+	h.logger.Info("parallel pod eviction completed",
 		"node", nodeName,
 		"total_pods", len(podsToEvict),
 		"successful_evictions", successCount,
@@ -205,7 +205,7 @@ func (h *KubernetesHandler) evictPodsInParallel(ctx context.Context, podsToEvict
 	// In emergency situations, partial success is better than total failure
 	if len(evictionErrors) > 0 {
 		for _, err := range evictionErrors {
-			h.logger.Error("Pod eviction error", "error", err)
+			h.logger.Error("pod eviction error", "error", err)
 		}
 
 		// Only fail if more than half the pods failed to evict
@@ -214,7 +214,7 @@ func (h *KubernetesHandler) evictPodsInParallel(ctx context.Context, podsToEvict
 		}
 	}
 
-	h.logger.Info("Node drain completed successfully", "node", nodeName, "evicted_pods", successCount)
+	h.logger.Info("node drain completed successfully", "node", nodeName, "evicted_pods", successCount)
 	return nil
 }
 
@@ -244,7 +244,7 @@ func (h *KubernetesHandler) isStaticPod(pod *corev1.Pod) bool {
 
 // evictPod evicts a pod using the eviction API with a short timeout for emergency situations
 func (h *KubernetesHandler) evictPod(ctx context.Context, pod *corev1.Pod) error {
-	h.logger.Info("Evicting pod",
+	h.logger.Info("evicting pod",
 		"pod", pod.Name,
 		"namespace", pod.Namespace,
 		"node", pod.Spec.NodeName)
@@ -259,14 +259,14 @@ func (h *KubernetesHandler) evictPod(ctx context.Context, pod *corev1.Pod) error
 	// Try to evict the pod
 	err := h.RestConfig.PolicyV1().Evictions(pod.Namespace).Evict(ctx, eviction)
 	if err != nil {
-		h.logger.Error("Pod eviction failed",
+		h.logger.Error("pod eviction failed",
 			"pod", pod.Name,
 			"namespace", pod.Namespace,
 			"error", err)
 		return fmt.Errorf("eviction failed: %w", err)
 	}
 
-	h.logger.Debug("Pod eviction request sent, waiting for deletion",
+	h.logger.Debug("pod eviction request sent, waiting for deletion",
 		"pod", pod.Name,
 		"namespace", pod.Namespace)
 
