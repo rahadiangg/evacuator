@@ -16,6 +16,54 @@ Evacuator monitors cloud provider instance metadata for termination events (spot
 - **Flexible Configuration**: Environment variables, YAML config files, or default values
 - **Configurable Processing Timeout**: Default 75s recommended for AWS 2-minute termination window, adjustable for other providers (e.g., GCP 30s window)
 
+## Installation
+
+### Docker Images
+
+Available on Docker Hub with multi-architecture support (linux/amd64, linux/arm64):
+- Latest: `rahadiangg/evacuator:latest`
+- Versioned: `rahadiangg/evacuator:1.2.3` (without "v" prefix)
+
+### Binary Downloads
+
+Pre-compiled binaries available from [GitHub Releases](https://github.com/rahadiangg/evacuator/releases):
+- `evacuator-v{version}-linux-amd64.zip` (with "v" prefix)
+- `evacuator-v{version}-linux-arm64.zip` (with "v" prefix)
+
+## Deployment Examples
+
+### Kubernetes DaemonSet
+
+See [`example/k8s-daemonset.yaml`](example/k8s-daemonset.yaml) for a complete Kubernetes deployment example with RBAC configuration.
+
+```bash
+kubectl apply -f example/k8s-daemonset.yaml
+```
+
+## Supported Cloud Providers
+
+| Provider | Termination Detection |
+|----------|----------------------|
+| **AWS** | Spot instance termination |
+| **Google Cloud** | Preemptible instance termination |
+| **AliCloud** | Spot instance termination |
+| **Tencent Cloud** | Spot instance termination |
+| **Dummy** | Testing and development |
+
+## Testing
+
+```bash
+# Run with dummy provider for testing
+docker run -d \
+  --name evacuator-test \
+  -e PROVIDER_NAME=dummy \
+  -e PROVIDER_DUMMY_ENABLED=true \
+  -e PROVIDER_DUMMY_DETECTION_WAIT=5s \
+  -e KUBERNETES_ENABLED=false \
+  -e LOG_LEVEL=debug \
+  rahadiangg/evacuator:latest
+```
+
 ## Configuration
 
 Configuration follows precedence order (highest to lowest):
@@ -54,39 +102,6 @@ See [`example/config-example.yaml`](example/config-example.yaml) for complete co
 
 ```bash
 ./evacuator --config example/config-example.yaml
-```
-
-## Deployment Examples
-
-### Kubernetes DaemonSet
-
-See [`example/k8s-daemonset.yaml`](example/k8s-daemonset.yaml) for a complete Kubernetes deployment example with RBAC configuration.
-
-```bash
-kubectl apply -f example/k8s-daemonset.yaml
-```
-
-## Supported Cloud Providers
-
-| Provider | Termination Detection |
-|----------|----------------------|
-| **AWS** | Spot instance termination |
-| **Google Cloud** | Preemptible instance termination |
-| **AliCloud** | Spot instance termination |
-| **Tencent Cloud** | Spot instance termination |
-| **Dummy** | Testing and development |
-
-## Testing
-
-```bash
-# Run with dummy provider for testing
-docker run -d \
-  -e PROVIDER_NAME=dummy \
-  -e PROVIDER_DUMMY_ENABLED=true \
-  -e PROVIDER_DUMMY_DETECTION_WAIT=5s \
-  -e KUBERNETES_ENABLED=false \
-  -e LOG_LEVEL=debug \
-  rahadiangg/evacuator:latest
 ```
 
 ## Support
