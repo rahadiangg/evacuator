@@ -85,14 +85,14 @@ Environment variables use uppercase with underscores. Nested YAML keys use under
 | `PROVIDER_DUMMY_ENABLED` | `provider.dummy.enabled` | `false` | Enable dummy provider for testing |
 | `PROVIDER_DUMMY_DETECTION_WAIT` | `provider.dummy.detection_wait` | `"10s"` | Dummy provider detection delay |
 | `HANDLER_PROCESSING_TIMEOUT` | `handler.processing_timeout` | `"75s"` | Handler processing timeout |
-| `KUBERNETES_ENABLED` | `handler.kubernetes.enabled` | `false` | Enable Kubernetes node draining |
-| `KUBERNETES_SKIP_DAEMON_SETS` | `handler.kubernetes.skip_daemon_sets` | `true` | Skip DaemonSet pods during drain |
-| `KUBERNETES_DELETE_EMPTY_DIR_DATA` | `handler.kubernetes.delete_empty_dir_data` | `false` | Delete pods with emptyDir volumes |
-| `KUBERNETES_KUBECONFIG` | `handler.kubernetes.kubeconfig` | `""` | Path to kubeconfig file |
-| `KUBERNETES_IN_CLUSTER` | `handler.kubernetes.in_cluster` | `true` | Use in-cluster service account |
-| `TELEGRAM_ENABLED` | `handler.telegram.enabled` | `false` | Enable Telegram notifications |
-| `TELEGRAM_BOT_TOKEN` | `handler.telegram.bot_token` | `""` | Telegram bot token |
-| `TELEGRAM_CHAT_ID` | `handler.telegram.chat_id` | `""` | Telegram chat/channel ID |
+| `HANDLER_KUBERNETES_ENABLED` | `handler.kubernetes.enabled` | `false` | Enable Kubernetes node draining |
+| `HANDLER_KUBERNETES_SKIP_DAEMON_SETS` | `handler.kubernetes.skip_daemon_sets` | `true` | Skip DaemonSet pods during drain |
+| `HANDLER_KUBERNETES_DELETE_EMPTY_DIR_DATA` | `handler.kubernetes.delete_empty_dir_data` | `false` | Delete pods with emptyDir volumes |
+| `HANDLER_KUBERNETES_KUBECONFIG` | `handler.kubernetes.kubeconfig` | `""` | Path to kubeconfig file |
+| `HANDLER_KUBERNETES_IN_CLUSTER` | `handler.kubernetes.in_cluster` | `true` | Use in-cluster service account |
+| `HANDLER_TELEGRAM_ENABLED` | `handler.telegram.enabled` | `false` | Enable Telegram notifications |
+| `HANDLER_TELEGRAM_BOT_TOKEN` | `handler.telegram.bot_token` | `""` | Telegram bot token |
+| `HANDLER_TELEGRAM_CHAT_ID` | `handler.telegram.chat_id` | `""` | Telegram chat/channel ID |
 | `LOG_LEVEL` | `log.level` | `"info"` | Log level (debug, info, warn, error) |
 | `LOG_FORMAT` | `log.format` | `"json"` | Log format (json, text) |
 
