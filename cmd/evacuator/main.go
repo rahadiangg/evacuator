@@ -82,6 +82,7 @@ func main() {
 		evacuator.NewAlicloudProvider(providerHttpClient, logger),
 		evacuator.NewTencentProvider(providerHttpClient, logger),
 		evacuator.NewGcpProvider(providerHttpClient, logger),
+		evacuator.NewHuaweiProvider(providerHttpClient, logger),
 	}
 
 	if config.Provider.Dummy.Enabled {
