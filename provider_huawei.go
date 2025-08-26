@@ -183,7 +183,7 @@ func (p *HuaweiProvider) doMetadataRequest(ctx context.Context, url string) (str
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("X-Security-Token", token)
+	req.Header.Set("X-Metadata-Token", token)
 
 	res, err := p.httpClient.Do(req)
 	if err != nil {
