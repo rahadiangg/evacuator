@@ -21,4 +21,5 @@ const (
 	ProviderAlicloud ProviderName = "alicloud"
 	ProviderGcp      ProviderName = "gcp"
 	ProviderTencent  ProviderName = "tencent"
+	ProviderHuawei   ProviderName = "huawei"
 )
