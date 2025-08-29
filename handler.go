@@ -55,11 +55,14 @@ func (r *HandlerRegistry) RegisterHandlers() ([]Handler, error) {
 
 	// Get global configuration
 	handlerConfig := GetHandlerConfig()
+	provderConfig := GetProviderConfig()
 
-	// log handler always registered
-	logHandler := NewLogHandler(r.logger)
-	handlers = append(handlers, logHandler)
-	r.logger.Info("log handler registered successfully")
+	// dummy handler registerd when prover is dummy
+	if provderConfig.Name == "dummy" {
+		logHandler := NewDummyHandler(r.logger)
+		handlers = append(handlers, logHandler)
+		r.logger.Info("dummy handler registered successfully")
+	}
 
 	// Register Kubernetes handler if enabled
 	if handlerConfig.Kubernetes.Enabled {
