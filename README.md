@@ -57,7 +57,6 @@ kubectl apply -f example/k8s-daemonset.yaml
 docker run -d \
   --name evacuator-test \
   -e PROVIDER_NAME=dummy \
-  -e PROVIDER_DUMMY_ENABLED=true \
   -e PROVIDER_DUMMY_DETECTION_WAIT=5s \
   -e KUBERNETES_ENABLED=false \
   -e LOG_LEVEL=debug \
@@ -82,7 +81,6 @@ Environment variables use uppercase with underscores. Nested YAML keys use under
 | `PROVIDER_AUTO_DETECT` | `provider.auto_detect` | `true` | Auto-detect cloud provider |
 | `PROVIDER_POLL_INTERVAL` | `provider.poll_interval` | `"3s"` | Metadata polling interval |
 | `PROVIDER_REQUEST_TIMEOUT` | `provider.request_timeout` | `"2s"` | Metadata request timeout |
-| `PROVIDER_DUMMY_ENABLED` | `provider.dummy.enabled` | `false` | Enable dummy provider for testing |
 | `PROVIDER_DUMMY_DETECTION_WAIT` | `provider.dummy.detection_wait` | `"10s"` | Dummy provider detection delay |
 | `HANDLER_PROCESSING_TIMEOUT` | `handler.processing_timeout` | `"75s"` | Handler processing timeout |
 | `HANDLER_KUBERNETES_ENABLED` | `handler.kubernetes.enabled` | `false` | Enable Kubernetes node draining |
