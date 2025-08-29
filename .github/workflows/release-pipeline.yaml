@@ -13,15 +13,17 @@ env:
   IMAGE_NAME: rahadiangg/evacuator
 
 jobs:
-  build-binaries:
+  build-and-docker:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
           - goos: linux
             goarch: amd64
+            platform: linux/amd64
           - goos: linux
             goarch: arm64
+            platform: linux/arm64
     outputs:
       version: ${{ steps.extract-version.outputs.version }}
     steps:
@@ -60,46 +62,11 @@ jobs:
           cd dist
           zip evacuator-v${{ steps.extract-version.outputs.version }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip evacuator
 
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: evacuator-binary-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: |
-            dist/evacuator
-            dist/evacuator.sha256
-
       - name: Upload release artifact
         uses: actions/upload-artifact@v4
         with:
           name: evacuator-release-${{ matrix.goos }}-${{ matrix.goarch }}
           path: dist/evacuator-v${{ steps.extract-version.outputs.version }}-${{ matrix.goos }}-${{ matrix.goarch }}.zip
-
-  docker-build-per-arch:
-    runs-on: ubuntu-latest
-    needs: build-binaries
-    strategy:
-      matrix:
-        include:
-          - goos: linux
-            goarch: amd64
-            platform: linux/amd64
-          - goos: linux
-            goarch: arm64
-            platform: linux/arm64
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download binary artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: evacuator-binary-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: ./dist
-
-      - name: Verify binary checksum
-        run: |
-          cd dist
-          sha256sum -c evacuator.sha256
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -116,7 +83,7 @@ jobs:
           context: .
           platforms: ${{ matrix.platform }}
           push: true
-          tags: ${{ env.IMAGE_NAME }}-nightly:${{ needs.build-binaries.outputs.version }}-${{ matrix.goos }}-${{ matrix.goarch }}
+          tags: ${{ env.IMAGE_NAME }}-nightly:${{ steps.extract-version.outputs.version }}-${{ matrix.goos }}-${{ matrix.goarch }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -126,7 +93,7 @@ jobs:
 
   docker-manifest:
     runs-on: ubuntu-latest
-    needs: [build-binaries, docker-build-per-arch]
+    needs: [build-and-docker]
     steps:
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -136,7 +103,7 @@ jobs:
 
       - name: Create and push multi-arch manifest
         run: |
-          VERSION="${{ needs.build-binaries.outputs.version }}"
+          VERSION="${{ needs.build-and-docker.outputs.version }}"
           
           # Create multi-arch image using imagetools
           docker buildx imagetools create \
@@ -147,11 +114,11 @@ jobs:
 
       - name: Inspect multi-arch image
         run: |
-          docker buildx imagetools inspect ${{ env.IMAGE_NAME }}:${{ needs.build-binaries.outputs.version }}
+          docker buildx imagetools inspect ${{ env.IMAGE_NAME }}:${{ needs.build-and-docker.outputs.version }}
 
   create-release:
     runs-on: ubuntu-latest
-    needs: [build-binaries, docker-manifest]
+    needs: [build-and-docker, docker-manifest]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
