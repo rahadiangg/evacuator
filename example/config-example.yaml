@@ -51,7 +51,6 @@ provider:
   ## The dummy provider simulates spot instance termination events
   ## without requiring actual cloud infrastructure
   dummy:
-    enabled: false
     
     ## Time to wait before triggering a fake termination event
     ## This simulates the delay between starting monitoring and 
