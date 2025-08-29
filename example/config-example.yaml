@@ -86,6 +86,13 @@ handler:
     ## Use in-cluster service account credentials vs external kubeconfig
     ## Options: true, false
     in_cluster: true
+  
+  nomad:
+    ## Options: true, false
+    enabled: false
+
+    ## Force drain the node (ignore any errors)
+    force: false
 
   ## Telegram notification handler - sends alert messages when spot termination detected
   ## Sends formatted message with hostname, instance ID, private IP, and termination reason
