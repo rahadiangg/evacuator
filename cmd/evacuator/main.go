@@ -85,7 +85,7 @@ func main() {
 		evacuator.NewHuaweiProvider(providerHttpClient, logger),
 	}
 
-	if config.Provider.Dummy.Enabled {
+	if config.Provider.Name == "dummy" {
 		providers = append(providers, evacuator.NewDummyProvider(logger, dummyDetectionWait))
 	}
 
