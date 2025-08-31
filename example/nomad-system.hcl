@@ -1,5 +1,5 @@
 job "evacuator" {
-    datacenters = ["dc1"]
+  datacenters = ["dc1"]
   type        = "system"
 
   group "evacuator" {
@@ -21,11 +21,10 @@ job "evacuator" {
         LOG_LEVEL                     = "debug"
         NODE_NAME                     = "${attr.unique.hostname}"
         # PROVIDER_NAME                 = "dummy"
-        # PROVIDER_DUMMY_ENABLED        = "true"
-        # PROVIDER_DUMMY_DETECTION_WAIT = "20s"
+        # PROVIDER_DUMMY_DETECTION_WAIT = "15s"
 
         # Nomad address (used for API communication)
-        NOMAD_ADDR                    = "${attr.unique.network.ip-address}"
+        NOMAD_ADDR = "http://${attr.unique.network.ip-address}:4646"
       }
 
       resources {
