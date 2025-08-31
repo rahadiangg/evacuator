@@ -41,6 +41,14 @@ See [`example/k8s-daemonset.yaml`](example/k8s-daemonset.yaml) for a complete Ku
 kubectl apply -f example/k8s-daemonset.yaml
 ```
 
+### Nomad System Job
+
+See [`example/nomad-system.hcl](example/nomad-system.hcl) for Nomad system job deployment example with workload identity.
+
+```bash
+nomad job run example/nomad-system.hcl
+```
+
 ## Supported Cloud Providers
 
 | Provider | Termination Detection |
