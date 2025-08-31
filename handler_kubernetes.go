@@ -82,7 +82,6 @@ func (h *KubernetesHandler) HandleTermination(ctx context.Context, event Termina
 	h.logger.Info("kubernetes node successfully cordoned", "node", event.Hostname, "handler", h.Name())
 
 	// drain the node
-	// same like `kubectl drain nodes xxxx --ignore-daemonsets --delete-emptydir-data`
 	err = h.drainNode(ctx, event.Hostname)
 	if err != nil {
 		return fmt.Errorf("failed to drain kubernetes node: %s", err)
@@ -95,6 +94,8 @@ func (h *KubernetesHandler) HandleTermination(ctx context.Context, event Termina
 // drainNode drains a Kubernetes node by evicting all pods except DaemonSet pods
 func (h *KubernetesHandler) drainNode(ctx context.Context, nodeName string) error {
 	h.logger.Info("starting node drain", "node", nodeName, "handler", h.Name())
+
+	handlerConfig := GetHandlerConfig()
 
 	// Get all pods on the node
 	fieldSelector := fields.OneTermEqualSelector("spec.nodeName", nodeName).String()
@@ -125,7 +126,7 @@ func (h *KubernetesHandler) drainNode(ctx context.Context, nodeName string) erro
 		}
 
 		// Skip DaemonSet pods (--ignore-daemonsets behavior)
-		if h.isDaemonSetPod(&pod) {
+		if handlerConfig.Kubernetes.SkipDaemonSets && h.isDaemonSetPod(&pod) {
 			skippedPods["daemonset"]++
 			h.logger.Debug("skipping DaemonSet pod", "pod", pod.Name, "namespace", pod.Namespace, "handler", h.Name())
 			continue
@@ -135,6 +136,13 @@ func (h *KubernetesHandler) drainNode(ctx context.Context, nodeName string) erro
 		if h.isStaticPod(&pod) {
 			skippedPods["static"]++
 			h.logger.Debug("skipping static pod", "pod", pod.Name, "namespace", pod.Namespace, "handler", h.Name())
+			continue
+		}
+
+		// Skip pods with emptyDir volumes unless delete_empty_dir_data is true
+		if !handlerConfig.Kubernetes.DeleteEmptyDirData && h.hasEmptyDirVolumes(&pod) {
+			skippedPods["emptydir"]++
+			h.logger.Debug("skipping pod with emptyDir volumes", "pod", pod.Name, "namespace", pod.Namespace, "handler", h.Name())
 			continue
 		}
 
@@ -149,6 +157,7 @@ func (h *KubernetesHandler) drainNode(ctx context.Context, nodeName string) erro
 		"skipped_completed", skippedPods["completed"],
 		"skipped_daemonset", skippedPods["daemonset"],
 		"skipped_static", skippedPods["static"],
+		"skipped_emptydir", skippedPods["emptydir"],
 		"handler", h.Name())
 
 	if len(podsToEvict) == 0 {
@@ -213,6 +222,16 @@ func (h *KubernetesHandler) evictPodsInParallel(ctx context.Context, podsToEvict
 
 	h.logger.Info("node drain completed successfully", "node", nodeName, "evicted_pods", successCount, "handler", h.Name())
 	return nil
+}
+
+// hasEmptyDirVolumes checks if a pod has any emptyDir volumes
+func (h *KubernetesHandler) hasEmptyDirVolumes(pod *corev1.Pod) bool {
+	for _, volume := range pod.Spec.Volumes {
+		if volume.EmptyDir != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // isDaemonSetPod checks if a pod is managed by a DaemonSet
