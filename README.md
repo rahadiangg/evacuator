@@ -8,10 +8,11 @@ Evacuator monitors cloud provider instance metadata for termination events (spot
 
 ## Features
 
-- **Multi-cloud Support**: AWS, Google Cloud Platform, AliCloud, Tencent Cloud, and Dummy (for testing)
+- **Multi-cloud Support**: AWS, Google Cloud Platform, AliCloud, Tencent Cloud, Huawei Cloud, and Dummy (for testing)
 - **Automatic Provider Detection**: Detects cloud provider from instance metadata
 - **Pluggable Handlers**: Extensible handler system for different workload management strategies
 - **Kubernetes Integration**: Built-in handler for cordoning and draining nodes gracefully
+- **HashiCorp Nomad Integration**: Built-in handler for draining Nomad nodes gracefully
 - **Telegram Notifications**: Handler for sending alerts when termination events are detected
 - **Flexible Configuration**: Environment variables, YAML config files, or default values
 - **Configurable Processing Timeout**: Default 75s recommended for AWS 2-minute termination window, adjustable for other providers (e.g., GCP 30s window)
@@ -48,6 +49,7 @@ kubectl apply -f example/k8s-daemonset.yaml
 | **Google Cloud** | Preemptible instance termination |
 | **AliCloud** | Spot instance termination |
 | **Tencent Cloud** | Spot instance termination |
+| **Huawei Cloud** | Spot instance termination |
 | **Dummy** | Testing and development |
 
 ## Testing
@@ -76,8 +78,8 @@ Environment variables use uppercase with underscores. Nested YAML keys use under
 
 | Environment Variable | YAML Path | Default | Description |
 |---------------------|-----------|---------|-------------|
-| `NODE_NAME` | `node_name` | `""` | Kubernetes node name (auto-detected if empty) |
-| `PROVIDER_NAME` | `provider.name` | `""` | Cloud provider name (aws, gcp, alicloud, tencent, dummy) |
+| `NODE_NAME` | `node_name` | `""` | Node name (auto-detected if empty) |
+| `PROVIDER_NAME` | `provider.name` | `""` | Cloud provider name (aws, gcp, alicloud, tencent, huawei, dummy) |
 | `PROVIDER_AUTO_DETECT` | `provider.auto_detect` | `true` | Auto-detect cloud provider |
 | `PROVIDER_POLL_INTERVAL` | `provider.poll_interval` | `"3s"` | Metadata polling interval |
 | `PROVIDER_REQUEST_TIMEOUT` | `provider.request_timeout` | `"2s"` | Metadata request timeout |
@@ -88,6 +90,8 @@ Environment variables use uppercase with underscores. Nested YAML keys use under
 | `HANDLER_KUBERNETES_DELETE_EMPTY_DIR_DATA` | `handler.kubernetes.delete_empty_dir_data` | `false` | Delete pods with emptyDir volumes |
 | `HANDLER_KUBERNETES_KUBECONFIG` | `handler.kubernetes.kubeconfig` | `""` | Path to kubeconfig file |
 | `HANDLER_KUBERNETES_IN_CLUSTER` | `handler.kubernetes.in_cluster` | `true` | Use in-cluster service account |
+| `HANDLER_NOMAD_ENABLED` | `handler.nomad.enabled` | `false` | Enable Nomad node draining |
+| `HANDLER_NOMAD_FORCE` | `handler.nomad.force` | `false` | Force drain the node (ignore errors) |
 | `HANDLER_TELEGRAM_ENABLED` | `handler.telegram.enabled` | `false` | Enable Telegram notifications |
 | `HANDLER_TELEGRAM_BOT_TOKEN` | `handler.telegram.bot_token` | `""` | Telegram bot token |
 | `HANDLER_TELEGRAM_CHAT_ID` | `handler.telegram.chat_id` | `""` | Telegram chat/channel ID |

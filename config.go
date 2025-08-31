@@ -21,6 +21,7 @@ type HandlerConfig struct {
 	ProcessingTimeout    time.Duration `mapstructure:"-"`
 
 	Kubernetes KubernetesConfig `mapstructure:"kubernetes"`
+	Nomad      NomadConfig      `mapstructure:"nomad"`
 	Telegram   TelegramConfig   `mapstructure:"telegram"`
 }
 
@@ -30,6 +31,11 @@ type KubernetesConfig struct {
 	DeleteEmptyDirData bool   `mapstructure:"delete_empty_dir_data"`
 	Kubeconfig         string `mapstructure:"kubeconfig"`
 	InCluster          bool   `mapstructure:"in_cluster"`
+}
+
+type NomadConfig struct {
+	Enabled bool `mapstructure:"enabled"`
+	Force   bool `mapstructure:"force"`
 }
 
 type TelegramConfig struct {
@@ -162,6 +168,11 @@ func validateConfig(c *Config) error {
 		}
 	}
 
+	// nomad
+	if c.Handler.Kubernetes.Enabled && c.Handler.Nomad.Enabled {
+		return fmt.Errorf("handler.kubernetes and handler.nomad cannot be enabled at the same time")
+	}
+
 	return nil
 }
 
@@ -191,6 +202,8 @@ var configItems = []ConfigItem{
 	{"HANDLER_TELEGRAM_ENABLED", "handler.telegram.enabled", false},
 	{"HANDLER_TELEGRAM_BOT_TOKEN", "handler.telegram.bot_token", ""},
 	{"HANDLER_TELEGRAM_CHAT_ID", "handler.telegram.chat_id", ""},
+	{"HANDLER_NOMAD_ENABLED", "handler.nomad.enabled", false},
+	{"HANDLER_NOMAD_FORCE", "handler.nomad.force", false},
 }
 
 // setDefaults sets default values for configuration
