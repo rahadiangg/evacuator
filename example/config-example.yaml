@@ -8,10 +8,9 @@
 # 2. Configuration file values
 # 3. Default values
 
-## Node name configuration for Kubernetes cluster identification
 ## The node name is automatically detected from cloud provider metadata (hostname)
 ## but you can specify it manually if needed for the following scenarios:
-## - Custom node naming schemes in Kubernetes clusters
+## - Custom node naming schemes in Kubernetes/Nomad clusters
 ## - When automatic detection fails or returns incorrect values  
 ## - When running in environments with non-standard hostname configurations
 ## - For testing purposes with specific node names
@@ -20,11 +19,11 @@ node_name: ""
 
 provider:
   ## Cloud provider configuration for spot instance termination monitoring
-  ## Supported providers: aws, alicloud, gcp, tencent, dummy
+  ## Supported providers: aws, alicloud, gcp, tencent, huawei, dummy
   ##
   ## When provider name is specified, auto_detect will be ignored
   ## Leave empty to use auto-detection
-  ## Examples: "aws", "alicloud", "gcp", "tencent", "dummy"
+  ## Examples: "aws", "alicloud", "gcp", "tencent", "huawei", "dummy"
   name: ""
   
   ## Auto-detect cloud provider from instance metadata
@@ -87,11 +86,14 @@ handler:
     ## Options: true, false
     in_cluster: true
   
+  ## HashiCorp Nomad node drain handler - drains nodes when spot termination detected
+  ## Process: 1) Set node to drain mode 2) Wait for allocations to be rescheduled 3) Mark as ineligible
   nomad:
     ## Options: true, false
     enabled: false
 
     ## Force drain the node (ignore any errors)
+    ## Options: true, false
     force: false
 
   ## Telegram notification handler - sends alert messages when spot termination detected
