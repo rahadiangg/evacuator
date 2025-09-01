@@ -9,21 +9,26 @@ import (
 )
 
 type NomadHandler struct {
-	logger      *slog.Logger
 	nomadClient *nomadApi.Client
+	config      NomadHandlerConfig
 }
 
-func NewNomadHandler(logger *slog.Logger) (*NomadHandler, error) {
+type NomadHandlerConfig struct {
+	Logger *slog.Logger
+	Force  bool
+}
+
+func NewNomadHandler(config *NomadHandlerConfig) (*NomadHandler, error) {
 
 	client, err := nomadApi.NewClient(nomadApi.DefaultConfig())
 	if err != nil {
-		logger.Error("failed to create Nomad client", "error", err.Error())
+		config.Logger.Error("failed to create Nomad client", "error", err.Error())
 		return nil, err
 	}
 
 	return &NomadHandler{
-		logger:      logger,
 		nomadClient: client,
+		config:      *config,
 	}, nil
 }
 
@@ -33,9 +38,7 @@ func (h *NomadHandler) Name() string {
 
 func (h *NomadHandler) HandleTermination(ctx context.Context, event TerminationEvent) error {
 
-	config := GetHandlerConfig()
-
-	h.logger.Info("handling nomad node termination", "node", event.Hostname, "handler", h.Name())
+	h.config.Logger.Info("handling nomad node termination", "node", event.Hostname, "handler", h.Name())
 
 	// get nomad nodes
 	nomadNodes, _, err := h.nomadClient.Nodes().List(&nomadApi.QueryOptions{
@@ -43,7 +46,7 @@ func (h *NomadHandler) HandleTermination(ctx context.Context, event TerminationE
 	})
 
 	if err != nil {
-		h.logger.Debug("failed to list nomad nodes", "error", err.Error(), "handler", h.Name())
+		h.config.Logger.Debug("failed to list nomad nodes", "error", err.Error(), "handler", h.Name())
 		return err
 	}
 
@@ -57,22 +60,22 @@ func (h *NomadHandler) HandleTermination(ctx context.Context, event TerminationE
 	}
 
 	if nodeID == "" {
-		h.logger.Debug(fmt.Sprintf("failed to find nomad node for %s", event.Hostname), "handler", h.Name())
+		h.config.Logger.Debug(fmt.Sprintf("failed to find nomad node for %s", event.Hostname), "handler", h.Name())
 		return err
 	}
 
-	h.logger.Info("nomad node found, proceeding with cordon", "node_id", nodeID, "node", nodeID, "node", event.Hostname, "handler", h.Name())
+	h.config.Logger.Info("nomad node found, proceeding with cordon", "node_id", nodeID, "node", nodeID, "node", event.Hostname, "handler", h.Name())
 
 	// cordon & drain the node
 	_, err = h.nomadClient.Nodes().UpdateDrain(nodeID, &nomadApi.DrainSpec{
-		IgnoreSystemJobs: config.Nomad.Force,
+		IgnoreSystemJobs: h.config.Force,
 	}, false, &nomadApi.WriteOptions{})
 
 	if err != nil {
-		h.logger.Debug(fmt.Sprintf("failed to drain nomad node for %s", event.Hostname), "handler", h.Name())
+		h.config.Logger.Debug(fmt.Sprintf("failed to drain nomad node for %s", event.Hostname), "handler", h.Name())
 		return err
 	}
-	h.logger.Info("nomad node successfully drained", "node_id", nodeID, "node", event.Hostname, "handler", h.Name())
+	h.config.Logger.Info("nomad node successfully drained", "node_id", nodeID, "node", event.Hostname, "handler", h.Name())
 
 	return nil
 }

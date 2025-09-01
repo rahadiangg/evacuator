@@ -12,28 +12,36 @@ import (
 )
 
 type TelegramHandler struct {
-	logger *slog.Logger
-	bot    *telego.Bot
-	chatID telego.ChatID
+	config    TelegramHandlerConfig
+	telegoBot *telego.Bot
+	chatId    telego.ChatID
 }
 
-func NewTelegramHandler(logger *slog.Logger, botToken string, chatID string) (*TelegramHandler, error) {
+type TelegramHandlerConfig struct {
+	Logger   *slog.Logger
+	BotToken string
+	ChatID   string
+}
 
-	bot, err := telego.NewBot(botToken)
+func NewTelegramHandler(config *TelegramHandlerConfig) (*TelegramHandler, error) {
+
+	bot, err := telego.NewBot(config.BotToken)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create telegram bot: %w", err)
 	}
 
 	// Parse chat ID to int64
-	chatIDInt, err := strconv.ParseInt(chatID, 10, 64)
+	chatIDInt, err := strconv.ParseInt(config.ChatID, 10, 64)
 	if err != nil {
 		return nil, fmt.Errorf("invalid chat ID format: %w", err)
 	}
 
+	chatID := telego.ChatID{ID: chatIDInt}
+
 	return &TelegramHandler{
-		logger: logger,
-		bot:    bot,
-		chatID: telego.ChatID{ID: chatIDInt},
+		config:    *config,
+		telegoBot: bot,
+		chatId:    chatID,
 	}, nil
 }
 
@@ -44,7 +52,7 @@ func (h *TelegramHandler) Name() string {
 func (h *TelegramHandler) HandleTermination(ctx context.Context, event TerminationEvent) error {
 	// Validate termination event first
 	if err := h.validateTerminationEvent(event); err != nil {
-		h.logger.Error("invalid termination event received", "error", err.Error(), "handler", h.Name())
+		h.config.Logger.Error("invalid termination event received", "error", err.Error(), "handler", h.Name())
 		return err
 	}
 
@@ -64,18 +72,18 @@ Node evacuation process has been initiated\.`,
 	)
 
 	// Send message using telego
-	_, err := h.bot.SendMessage(ctx, &telego.SendMessageParams{
-		ChatID:    h.chatID,
+	_, err := h.telegoBot.SendMessage(ctx, &telego.SendMessageParams{
+		ChatID:    h.chatId,
 		Text:      message,
 		ParseMode: telego.ModeMarkdownV2,
 	})
 
 	if err != nil {
-		h.logger.Error("failed to send telegram message", "error", err.Error(), "handler", h.Name())
+		h.config.Logger.Error("failed to send telegram message", "error", err.Error(), "handler", h.Name())
 		return fmt.Errorf("failed to send telegram notification: %w", err)
 	}
 
-	h.logger.Info("termination event processed successfully", "handler", h.Name())
+	h.config.Logger.Info("termination event processed successfully", "handler", h.Name())
 	return nil
 }
 

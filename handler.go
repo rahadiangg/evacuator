@@ -59,7 +59,9 @@ func (r *HandlerRegistry) RegisterHandlers() ([]Handler, error) {
 
 	// dummy handler registerd when prover is dummy
 	if provderConfig.Name == "dummy" {
-		logHandler := NewDummyHandler(r.logger)
+		logHandler := NewDummyHandler(&DummyHandlerConfig{
+			Logger: r.logger,
+		})
 		handlers = append(handlers, logHandler)
 		r.logger.Info("dummy handler registered successfully")
 	}
@@ -116,17 +118,26 @@ func (r *HandlerRegistry) RegisterHandlers() ([]Handler, error) {
 func (r *HandlerRegistry) createKubernetesHandler() (Handler, error) {
 	handlerConfig := GetHandlerConfig()
 	return NewKubernetesHandler(&KubernetesHandlerConfig{
-		InCluster:            handlerConfig.Kubernetes.InCluster,
-		CustomKubeConfigPath: handlerConfig.Kubernetes.Kubeconfig,
-	}, r.logger)
+		Logger:             r.logger,
+		InCluster:          handlerConfig.Kubernetes.InCluster,
+		Kubeconfig:         handlerConfig.Kubernetes.Kubeconfig,
+		SkipDaemonSets:     handlerConfig.Kubernetes.SkipDaemonSets,
+		DeleteEmptyDirData: handlerConfig.Kubernetes.DeleteEmptyDirData,
+	})
 }
 
 func (r *HandlerRegistry) createTelegramHandler() (Handler, error) {
 	handlerConfig := GetHandlerConfig()
 
-	return NewTelegramHandler(r.logger, handlerConfig.Telegram.BotToken, handlerConfig.Telegram.ChatID)
+	return NewTelegramHandler(&TelegramHandlerConfig{
+		Logger:   r.logger,
+		BotToken: handlerConfig.Telegram.BotToken,
+		ChatID:   handlerConfig.Telegram.ChatID,
+	})
 }
 
 func (r *HandlerRegistry) createNomadHandler() (Handler, error) {
-	return NewNomadHandler(r.logger)
+	return NewNomadHandler(&NomadHandlerConfig{
+		Logger: r.logger,
+	})
 }
