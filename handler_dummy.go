@@ -6,17 +6,21 @@ import (
 )
 
 type DummyHandler struct {
-	logger *slog.Logger
+	config DummyHandlerConfig
 }
 
-func NewDummyHandler(logger *slog.Logger) *DummyHandler {
+type DummyHandlerConfig struct {
+	Logger *slog.Logger
+}
+
+func NewDummyHandler(config *DummyHandlerConfig) *DummyHandler {
 	return &DummyHandler{
-		logger: logger,
+		config: *config,
 	}
 }
 
 func (h *DummyHandler) HandleTermination(ctx context.Context, event TerminationEvent) error {
-	h.logger.Info("dummy handler fired",
+	h.config.Logger.Info("dummy handler fired",
 		"hostname", event.Hostname,
 		"private_ip", event.PrivateIP,
 		"instance_id", event.InstanceID,
