@@ -61,7 +61,7 @@ func (h *NomadHandler) HandleTermination(ctx context.Context, event TerminationE
 
 	if nodeID == "" {
 		h.config.Logger.Debug(fmt.Sprintf("failed to find nomad node for %s", event.Hostname), "handler", h.Name())
-		return err
+		return fmt.Errorf("nomad node not found for hostname: %s", event.Hostname)
 	}
 
 	h.config.Logger.Info("nomad node found, proceeding with cordon", "node_id", nodeID, "node", nodeID, "node", event.Hostname, "handler", h.Name())

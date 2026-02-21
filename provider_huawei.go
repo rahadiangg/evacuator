@@ -24,10 +24,9 @@ const (
 	HuaweiMetaDataTokenUrl = HuaweiMetaDataBaseUrl + "/meta-data/latest/api/token"
 
 	// huawei metadata endpoint
-	HuaweiMetaDataSpotUrl       = HuaweiMetaDataBaseUrl + "/openstack/latest/spot/instance-action"
-	HuaweiMetaDataHostnameUrl   = HuaweiMetaDataBaseUrl + "/latest/meta-data/hostname"
-	HuaweiMetaDataInstanceIdUrl = HuaweiMetaDataBaseUrl + "-"
-	HuaweiMetaDataLocalIpUrl    = HuaweiMetaDataBaseUrl + "/latest/meta-data/local-ipv4"
+	HuaweiMetaDataSpotUrl     = HuaweiMetaDataBaseUrl + "/openstack/latest/spot/instance-action"
+	HuaweiMetaDataHostnameUrl = HuaweiMetaDataBaseUrl + "/latest/meta-data/hostname"
+	HuaweiMetaDataLocalIpUrl  = HuaweiMetaDataBaseUrl + "/latest/meta-data/local-ipv4"
 )
 
 func NewHuaweiProvider(client *http.Client, logger *slog.Logger) *HuaweiProvider {
@@ -161,6 +160,11 @@ func (p *HuaweiProvider) getMetadataToken(ctx context.Context) (string, error) {
 		return "", err
 	}
 	defer res.Body.Close()
+
+	// Validate status code before reading body
+	if res.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("token request failed with status %d", res.StatusCode)
+	}
 
 	// parse token
 	body, err := io.ReadAll(res.Body)

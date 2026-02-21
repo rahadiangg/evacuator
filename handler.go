@@ -72,10 +72,10 @@ func (r *HandlerRegistry) RegisterHandlers() ([]Handler, error) {
 		if err != nil {
 			r.logger.Error("failed to create kubernetes handler", "error", err)
 			errors = append(errors, fmt.Errorf("kubernetes handler: %w", err))
+		} else {
+			handlers = append(handlers, kubernetesHandler)
+			r.logger.Info("kubernetes handler registered successfully")
 		}
-
-		handlers = append(handlers, kubernetesHandler)
-		r.logger.Info("kubernetes handler registered successfully")
 	}
 
 	// Register Telegram handler if enabled
@@ -84,10 +84,10 @@ func (r *HandlerRegistry) RegisterHandlers() ([]Handler, error) {
 		if err != nil {
 			r.logger.Error("failed to create telegram handler", "error", err)
 			errors = append(errors, fmt.Errorf("telegram handler: %w", err))
+		} else {
+			handlers = append(handlers, telegramHandler)
+			r.logger.Info("telegram handler registered successfully")
 		}
-
-		handlers = append(handlers, telegramHandler)
-		r.logger.Info("telegram handler registered successfully")
 	}
 
 	// Register Nomad handler if enabled
@@ -96,10 +96,10 @@ func (r *HandlerRegistry) RegisterHandlers() ([]Handler, error) {
 		if err != nil {
 			r.logger.Error("failed to create nomad handler", "error", err)
 			errors = append(errors, fmt.Errorf("nomad handler: %w", err))
+		} else {
+			handlers = append(handlers, nomadHandler)
+			r.logger.Info("nomad handler registered successfully")
 		}
-
-		handlers = append(handlers, nomadHandler)
-		r.logger.Info("nomad handler registered successfully")
 	}
 
 	// Return error if no handlers were registered

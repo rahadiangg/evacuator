@@ -168,6 +168,11 @@ func (p *AlicloudProvider) getMetadataToken(ctx context.Context) (string, error)
 	}
 	defer res.Body.Close()
 
+	// Validate status code before reading body
+	if res.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("token request failed with status %d", res.StatusCode)
+	}
+
 	// parse token
 	body, err := io.ReadAll(res.Body)
 	if err != nil {

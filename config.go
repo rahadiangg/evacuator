@@ -156,8 +156,8 @@ func validateConfig(c *Config) error {
 
 	// telegram
 	if c.Handler.Telegram.Enabled {
-		if c.Handler.Telegram.BotToken == "" && c.Handler.Telegram.ChatID == "" {
-			return fmt.Errorf("handler.telegram.bot_token and handler.telegram.chat_id must be set")
+		if c.Handler.Telegram.BotToken == "" || c.Handler.Telegram.ChatID == "" {
+			return fmt.Errorf("handler.telegram.bot_token and handler.telegram.chat_id must both be set")
 		}
 	}
 

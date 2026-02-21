@@ -113,8 +113,22 @@ func (p *GcpProvider) isSpotTerminationDetected(ctx context.Context) (bool, erro
 		return false, err
 	}
 
+	// Handle empty response as no termination (safe default)
+	if spotInfo == "" {
+		p.logger.Debug("empty spot info response, treating as no termination", "provider", p.Name())
+		return false, nil
+	}
+
+	// GCP returns "FALSE" when no termination is scheduled
 	if spotInfo == "FALSE" {
 		p.logger.Debug("no spot termination detected", "provider", p.Name())
+		return false, nil
+	}
+
+	// Only return true if response is "TRUE"
+	if spotInfo != "TRUE" {
+		p.logger.Warn("unexpected spot info response value", "value", spotInfo, "provider", p.Name())
+		return false, nil
 	}
 
 	return true, nil

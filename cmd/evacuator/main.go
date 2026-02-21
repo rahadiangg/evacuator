@@ -213,34 +213,34 @@ func broadcastTerminationEvents(ctx context.Context, terminationEvent <-chan eva
 			results := make(chan HandlerResult, len(handlers))
 
 			for _, handler := range handlers {
+				handler := handler // Capture loop variable
 				handlerWg.Add(1)
-				go func(h evacuator.Handler) {
+				go func() {
 					defer handlerWg.Done()
+
+					// Create a copy of the event for this handler to prevent data races
+					handlerEvent := event
+					if config.NodeName != "" {
+						handlerEvent.Hostname = config.NodeName
+					}
 
 					handlerCtx, cancel := context.WithTimeout(ctx, config.Handler.ProcessingTimeout)
 					defer cancel()
 
-					logger.Debug("processing termination event with handler", "handler", h.Name())
+					logger.Debug("processing termination event with handler", "handler", handler.Name())
 
-					// if node.name configured, use it as hostname
-					if config.NodeName != "" {
-						event.Hostname = config.NodeName
-					}
-
-					err := h.HandleTermination(handlerCtx, event)
+					err := handler.HandleTermination(handlerCtx, handlerEvent)
 					results <- HandlerResult{
-						HandlerName: h.Name(),
+						HandlerName: handler.Name(),
 						Error:       err,
 						ProcessedAt: time.Now(),
 					}
-				}(handler)
+				}()
 			}
 
 			// Wait for all handlers to complete and collect results
-			go func() {
-				handlerWg.Wait()
-				close(results)
-			}()
+			handlerWg.Wait()
+			close(results)
 
 			// Process results
 			successCount := 0

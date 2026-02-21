@@ -18,7 +18,9 @@ import (
 )
 
 type KubernetesHandler struct {
-	RestConfig *kubernetes.Clientset // Kubernetes clientset for interacting with the cluster
+	// RestConfig is the Kubernetes clientset (named for backward compatibility)
+	// Note: This is a *kubernetes.Clientset, not a *rest.Config
+	RestConfig *kubernetes.Clientset
 	config     KubernetesHandlerConfig
 }
 
